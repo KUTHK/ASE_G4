@@ -1,3 +1,3 @@
-*Advanced Software Engineering Group 4*
+**Advanced Software Engineering Group 4**
 
-**Bicycle parking space availability　detection system**
+*Bicycle parking space availability detection system*
