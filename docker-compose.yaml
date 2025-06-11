@@ -1,0 +1,14 @@
+services:
+  grpc_server:
+    build: ./grpc_server
+    ports:
+      - "50051:50051"
+    volumes:
+      - ../../nas-homes/krlabmember/kataoka/AES/img/:/data
+
+  flask_app:
+    build: ./flask_app
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../../nas-homes/krlabmember/kataoka/AES/img/:/data

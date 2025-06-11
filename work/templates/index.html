@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <!-- Bootstrap CSS (CDN) -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding-top: 50px; background-color: #f8f9fa; }
+        .container { text-align: center; }
+        .timestamp { margin-top: 10px; font-size: 1.2em; }
+        button { margin-top: 20px; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">{{ title }}</h1>
+        <div id="image-container">
+            {% if image %}
+                <img id="resultImage" src="data:image/jpeg;base64,{{ image }}" alt="画像" class="img-fluid">
+            {% else %}
+                <p>画像の生成に失敗しました。</p>
+            {% endif %}
+        </div>
+        <div class="timestamp">
+            現在時間: <span id="current-time">{{ current_time }}</span>
+        </div>
+        <!-- 画面更新ボタン -->
+        <button id="refresh-btn" class="btn btn-primary">画面更新</button>
+        <!-- 推論ボタン -->
+        <button id="inference-btn" class="btn btn-success">推論</button>
+    </div>
+
+    <!-- jQuery and Bootstrap JS (CDN) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        // 画面更新ボタン (ページ全体をリロード)
+        document.getElementById("refresh-btn").addEventListener("click", function(){
+            window.location.reload();
+        });
+        
+        // 推論ボタン (AJAX で inference を呼び出す)
+        document.getElementById("inference-btn").addEventListener("click", function(){
+            fetch("/inference")
+            .then(response => response.json())
+            .then(data => {
+                if(data.image){
+                    document.getElementById("resultImage").src = "data:image/jpeg;base64," + data.image;
+                } else if(data.error) {
+                    alert(data.error);
+                }
+            })
+            .catch(error => console.error("エラー:", error));
+        });
+    </script>
+</body>
+</html>
