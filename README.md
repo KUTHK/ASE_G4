@@ -16,6 +16,11 @@
     ```
     In this shell script, the required directory is mounted in docker container, you can access codes and directories in `app`
 
+    **NOTE** if there is no GPU in your computer or not install NVIDIA driver, please run `run_docker_no_gpu.sh`
+    ```
+    ./run_docker_no_gpu.sh
+    ```
+
 
 # How to run the program
 
