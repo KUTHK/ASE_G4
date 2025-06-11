@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package capture;
+
+service ImageCapture {
+  // クライアントストリーミングRPC：クライアントが複数の CaptureData を送信し、サーバは1回の応答を返します
+  rpc StreamData(stream CaptureData) returns (CaptureData);
+}
+
+message CaptureData {
+  int32 id = 1;
+  // サーバからのコマンド（例："request"）
+  string command = 2;
+  // 画像データ（クライアントが送信）
+  bytes image_data = 3;
+  // 任意のテキストメッセージ
+  string message = 4;
+  // タイムスタンプ
+  string timestamp = 5;
+}
