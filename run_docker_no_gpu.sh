@@ -13,7 +13,7 @@ GRPC_PORT=50051
 WEB_PORT=5000
 
 # Dockerイメージ名
-IMAGE_NAME="yolov5-server:v2"
+IMAGE_NAME="ktryoma/ase-server:v1"
 
 # コンテナ名
 CONTAINER_NAME="yolo_server_container_no_gpu"
