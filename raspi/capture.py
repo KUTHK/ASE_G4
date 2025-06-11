@@ -5,6 +5,8 @@ import datetime
 import capture_pb2
 import capture_pb2_grpc
 
+
+# please edit if you use AWS
 host = '172.21.48.46'
 
 def capture_data_generator(cap):
@@ -44,7 +46,7 @@ def main():
         print("Error: Could not open video.")
         return
     
-    # gRPCチャンネルの作成（ホストアドレス、ポートは適宜変更してください）
+    # gRPCチャンネルの作成
     channel = grpc.insecure_channel(f'{host}:50051')
     stub = capture_pb2_grpc.ImageCaptureStub(channel)
     
