@@ -2,7 +2,7 @@
 
 # ホスト側の相対パスを絶対パスに変換
 HOST_IMG_DIR="$(pwd)/img"
-HOST_DATA_DIR="$(pwd)/work"
+HOST_DATA_DIR="$(pwd)/flask"
 
 # コンテナ内のマウント先
 CONTAINER_IMG_DIR="/app/img"
