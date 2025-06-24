@@ -7,7 +7,8 @@ import capture_pb2_grpc
 
 
 # please edit if you use AWS
-host = '172.21.48.46'
+# host = '172.21.48.46'
+host = '3.229.5.53'
 
 def capture_data_generator(cap):
     msg_id = 0
