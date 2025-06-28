@@ -6,7 +6,8 @@ import capture_pb2
 import capture_pb2_grpc
 
 # please edit if you use AWS
-host = '172.21.48.46'
+# host = '172.21.48.46'
+host = '54.211.126.57'
 
 def capture_data_generator(cap0, cap1):
     msg_id = 0
@@ -30,7 +31,7 @@ def capture_data_generator(cap0, cap1):
                 id=msg_id,
                 command="request",
                 image_data=image_data0,
-                message="Frame captured from camera 0",
+                message="camera 0",
                 timestamp=datetime.datetime.now().isoformat()
             )
             
@@ -43,7 +44,7 @@ def capture_data_generator(cap0, cap1):
                 id=msg_id + 1,
                 command="request",
                 image_data=image_data1,
-                message="Frame captured from camera 1",
+                message="camera 1",
                 timestamp=datetime.datetime.now().isoformat()
             )
             
@@ -60,13 +61,13 @@ def capture_data_generator(cap0, cap1):
 def main():
     # 2台のカメラの初期化
     cap0 = cv2.VideoCapture(0)
-    cap1 = cv2.VideoCapture(1)
+    cap1 = cv2.VideoCapture(2)
     if not cap0.isOpened() or not cap1.isOpened():
         print("Error: Could not open video.")
         return
     
     # gRPCチャンネルの作成
-    channel = grpc.insecure_channel(f'{host}:50051')
+    channel = grpc.insecure_channel(f'{host}:443')
     stub = capture_pb2_grpc.ImageCaptureStub(channel)
     
     # カスタマーライベントリーミングRPCを呼び出し、サーバからの応答を受信
