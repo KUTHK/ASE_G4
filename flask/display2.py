@@ -20,7 +20,8 @@ import capture_pb2_grpc
 app = Flask(__name__, template_folder='templates')
 
 # 受信した画像データを保持するグローバル変数
-latest_image = None
+latest_image0 = None
+latest_image1 = None
 latest_time = None
 # count = 0
 
@@ -28,18 +29,27 @@ model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
 
 img_path = r"./img/"
 
+# def capture_image():
+#     global latest_image
+#     # 受信済み画像があればそれを返す、なければ黒画像を生成
+#     if latest_image is not None:
+#         return latest_image
+#     # 黒い画像（480x640）を生成
+#     black_img = np.zeros((480, 640, 3), dtype=np.uint8)
+#     retval, buffer = cv2.imencode('.jpg', black_img)
+#     if retval:
+#         img_str = base64.b64encode(buffer).decode('utf-8')
+#         return img_str
+#     return None
+
 def capture_image():
-    global latest_image
-    # 受信済み画像があればそれを返す、なければ黒画像を生成
-    if latest_image is not None:
-        return latest_image
-    # 黒い画像（480x640）を生成
+    global latest_image0, latest_image1
+    if latest_image0 or latest_image1:
+        return latest_image0
     black_img = np.zeros((480, 640, 3), dtype=np.uint8)
     retval, buffer = cv2.imencode('.jpg', black_img)
-    if retval:
-        img_str = base64.b64encode(buffer).decode('utf-8')
-        return img_str
-    return None
+    return base64.b64encode(buffer).decode('utf-8') if retval else None
+
 
 def inference(base64_img):
     # base64文字列をバイト配列に戻す
@@ -63,22 +73,28 @@ def inference(base64_img):
 
 @app.route('/')
 def index():
-    title = "受信した画像表示"
-    image = capture_image()
+    # title = "受信した画像表示"
+    # image = capture_image()
+    
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # +9hする（日本時間）
+    img0 = latest_image0 or capture_image()
+    img1 = latest_image1 or capture_image()
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
     return render_template('capture.html',
-                           image0=latest_image0,
-                           image1=latest_image1,
+                           image0=img0,
+                           image1=img1,
                            current_time=current_time)
 
 @app.route('/capture_image', methods=['GET'])
 def get_new_image():
-    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    current_time = (datetime.now() + timedelta(hours=9))\
+                   .strftime("%Y-%m-%d %H:%M:%S")
+    img0 = latest_image0 or capture_image()
+    img1 = latest_image1 or capture_image()
     return jsonify({
-        "image0": latest_image0,
-        "image1": latest_image1,
+        "image0": img0,
+        "image1": img1,
         "current_time": current_time
     })
 
