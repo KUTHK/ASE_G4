@@ -7,8 +7,9 @@ import capture_pb2_grpc
 
 
 # please edit if you use AWS
+# host = 'localhost'  # Use 'localhost' for local testing or replace with your server's IP address
 # host = '172.21.48.46'
-host = '3.229.5.53'
+host = '54.211.126.57'
 
 def capture_data_generator(cap):
     msg_id = 0
@@ -48,7 +49,9 @@ def main():
         return
     
     # gRPCチャンネルの作成
-    channel = grpc.insecure_channel(f'{host}:50051')
+    # channel = grpc.insecure_channel(f'{host}:50051')
+    channel = grpc.insecure_channel(f'{host}:443')
+    # channel = grpc.insecure_channel(f'{host}:50051', options=[('grpc.enable_http_proxy', 0)])
     stub = capture_pb2_grpc.ImageCaptureStub(channel)
     
     # クライアントストリーミングRPCを呼び出し、サーバからの応答を受信

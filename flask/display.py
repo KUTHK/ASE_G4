@@ -123,9 +123,9 @@ class ImageCaptureServicer(capture_pb2_grpc.ImageCaptureServicer):
 def start_grpc_server():
     server = grpc.server(concurrent.futures.ThreadPoolExecutor(max_workers=10))
     capture_pb2_grpc.add_ImageCaptureServicer_to_server(ImageCaptureServicer(), server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port('[::]:443')
     server.start()
-    print("gRPC server started on port 50051")
+    print("gRPC server started on port 443")
     # サーバをブロックせずに動作させるため無限ループ（Ctrl+Cで終了）
     server.wait_for_termination()
 

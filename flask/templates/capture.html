@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Dual Camera View</title>
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body { padding-top: 50px; background-color: #f8f9fa; }
+    .camera-img { 
+      width: 100%; 
+      height: 360px; 
+      object-fit: contain; 
+      background-color: #000; 
+    }
+    .timestamp { margin-top: 10px; font-size: 1.1em; }
+  </style>
+</head>
+<body>
+  <div class="container text-center">
+    <h1 class="mb-4">Dual Camera View</h1>
+
+    <!-- 画面更新ボタン -->
+    <button id="refresh-btn" class="btn btn-primary mb-3">画面更新</button>
+
+    <div class="row">
+      <div class="col-sm-6 mb-3">
+        <h5>Camera 0</h5>
+        {% if image0 %}
+          <img id="cam0" src="data:image/jpeg;base64,{{ image0 }}" class="camera-img border" alt="Camera 0">
+        {% else %}
+          <div id="cam0" class="camera-img border"></div>
+        {% endif %}
+      </div>
+      <div class="col-sm-6 mb-3">
+        <h5>Camera 1</h5>
+        {% if image1 %}
+          <img id="cam1" src="data:image/jpeg;base64,{{ image1 }}" class="camera-img border" alt="Camera 1">
+        {% else %}
+          <div id="cam1" class="camera-img border"></div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="timestamp">
+      Last update: <span id="time">{{ current_time }}</span>
+    </div>
+  </div>
+
+  <!-- jQuery (Bootstrap の依存) -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script>
+    // 画面更新ボタン (ページ全体をリロード)
+    document.getElementById("refresh-btn").addEventListener("click", () => {
+      window.location.reload();
+    });
+
+    // 5秒ごとに最新画像を取得
+    setInterval(() => {
+      fetch('/capture_image')
+        .then(res => res.json())
+        .then(data => {
+          // camera 0
+          if (data.image0) {
+            if (document.getElementById('cam0').tagName === 'DIV') {
+              const img = document.createElement('img');
+              img.id = 'cam0';
+              img.className = 'camera-img border';
+              img.alt = 'Camera 0';
+              document.querySelector('[alt="Camera 0"]').replaceWith(img);
+            }
+            document.getElementById('cam0').src = 'data:image/jpeg;base64,' + data.image0;
+          } else if (document.getElementById('cam0').tagName === 'IMG') {
+            const div = document.createElement('div');
+            div.id = 'cam0';
+            div.className = 'camera-img border';
+            document.getElementById('cam0').replaceWith(div);
+          }
+          // camera 1
+          if (data.image1) {
+            if (document.getElementById('cam1').tagName === 'DIV') {
+              const img = document.createElement('img');
+              img.id = 'cam1';
+              img.className = 'camera-img border';
+              img.alt = 'Camera 1';
+              document.querySelector('[alt="Camera 1"]').replaceWith(img);
+            }
+            document.getElementById('cam1').src = 'data:image/jpeg;base64,' + data.image1;
+          } else if (document.getElementById('cam1').tagName === 'IMG') {
+            const div = document.createElement('div');
+            div.id = 'cam1';
+            div.className = 'camera-img border';
+            document.getElementById('cam1').replaceWith(div);
+          }
+          // 時刻更新
+          document.getElementById('time').textContent = data.current_time;
+        });
+    }, 5000);
+  </script>

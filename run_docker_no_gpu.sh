@@ -9,7 +9,7 @@ CONTAINER_IMG_DIR="/app/img"
 CONTAINER_DATA_DIR="/app/work"
 
 # ポート設定
-GRPC_PORT=50051
+GRPC_PORT=443
 WEB_PORT=5000
 
 # Dockerイメージ名
@@ -27,7 +27,7 @@ fi
 docker run -it \
   --name "${CONTAINER_NAME}" \
   -p ${WEB_PORT}:5000 \
-  -p ${GRPC_PORT}:50051 \
+  -p ${GRPC_PORT}:443 \
   -v "${HOST_IMG_DIR}:${CONTAINER_IMG_DIR}" \
   -v "${HOST_DATA_DIR}:${CONTAINER_DATA_DIR}" \
   -w /app \
