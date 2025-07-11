@@ -2,8 +2,8 @@ from ultralytics import YOLO
 import numpy as np
 import cv2
 
-model = YOLO("yolov8n-seg.pt")
-# model = YOLO("yolov8m-seg.pt")
+# model = YOLO("yolov8n-seg.pt")
+model = YOLO("yolov8l-seg.pt")
 
 def scan_area(image, target_size):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
