@@ -12,10 +12,12 @@ PIXEL_PER_METER = None
 def detect_lines(gray):
 
     # # コントラスト制御
-    clane = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    gray = clane.apply(gray)
+    # clane = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    # gray = clane.apply(gray)
     # gray = cv2.equalizeHist(gray)
     
+    lap = cv2.Laplacian(gray, cv2.CV_64F, ksize=3)
+    gray = np.uint8(np.clip(lap, 0, 255))
     # 大津の二値化
     # _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
@@ -52,10 +54,10 @@ def detect_lines2(gray):
     gray = clane.apply(gray)
 
     # ノイズ除去
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    # blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
     # Sobelフィルタで縦方向エッジ（x方向の変化）を抽出
-    sobelx = cv2.Sobel(blur, cv2.CV_64F, 1, 0, ksize=3)
+    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
     sobelx = np.absolute(sobelx)
     sobelx = np.uint8(np.clip(sobelx, 0, 255))
 
