@@ -77,20 +77,20 @@
     }
 
     .slot {
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      color: #fff;
-      font-weight: bold;
-      text-align: center;
-      line-height: 28px;
-      font-size: 14px;
-      cursor: pointer;
-      user-select: none;
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-      transform: translate(-50%, -50%);
-    }
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: bold;
+  text-align: center;
+  line-height: 28px;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  transform: translate(-50%, -50%);
+}
 
     .vacant { background-color: green; }
     .few { background-color: orange; }
@@ -114,27 +114,28 @@
 </head>
 <body>
 
-<h2 style="text-align: center; color: #333;">現在の駐輪状況</h2>
+  <h2 style="text-align: center; color: #333; margin-top: 1rem;">現在の駐輪状況</h2>
+
 
 <div class="map-container" id="map">
-  <div class="column" style="top: 5%; left: 10%;"></div>
-  <div class="column" style="top: 5%; left: 24%;"></div>
-  <div class="column" style="top: 5%; left: 53%;"></div>
-  <div class="column2" style="top: 5%; left: 80%;"></div>
+  <div class="column" style="top: 5%; left: 10%;">
+    <div class="slot" data-id="9" style="top: 25%; left: 50%;"></div>
+    <div class="slot" data-id="8" style="top: 75%; left: 50%;"></div>
+  </div>
+  <div class="column" style="top: 5%; left: 24%;">
+    <div class="slot" data-id="7" style="top: 25%; left: 50%;"></div>
+    <div class="slot" data-id="6" style="top: 75%; left: 50%;"></div>
+  </div>
+  <div class="column" style="top: 5%; left: 53%;">
+    <div class="slot" data-id="5" style="top: 25%; left: 50%;"></div>
+    <div class="slot" data-id="4" style="top: 75%; left: 50%;"></div>
+  </div>
+  <div class="column2" style="top: 5%; left: 80%;">
+    <div class="slot" data-id="3" style="top: 16.5%; left: 50%;"></div>
+    <div class="slot" data-id="2" style="top: 49.8%; left: 50%;"></div>
+    <div class="slot" data-id="1" style="top: 83.1%; left: 50%;"></div>
+  </div>
 </div>
-
-<!-- スロット表示 -->
-<div class="slot error" style="top: 85%; left: 77%;" data-id="1"></div>
-<div class="slot error" style="top: 55%; left: 77%;" data-id="2"></div>
-<div class="slot error" style="top: 27%; left: 77%;" data-id="3"></div>
-<div class="slot error" style="top: 55%; left: 57.5%;" data-id="4"></div>
-<div class="slot error" style="top: 27%; left: 57.5%;" data-id="5"></div>
-<div class="slot error" style="top: 55%; left: 36.5%;" data-id="6"></div>
-<div class="slot error" style="top: 27%; left: 36.5%;" data-id="7"></div>
-<div class="slot error" style="top: 55%; left: 26%;" data-id="8"></div>
-<div class="slot error" style="top: 27%; left: 26%;" data-id="9"></div>
-
-<div id="slot-info" class="slot-info"></div>
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
