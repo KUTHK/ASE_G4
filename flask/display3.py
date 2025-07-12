@@ -47,12 +47,20 @@ def capture_image():
 
 @app.route('/')
 def index():
-    title = "受信した画像表示"
+    title = "受信した画像表示 (詳細版)"
     image = capture_image()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # +9hする（日本時間）
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
-    return render_template('index.html', title=title, image=image, current_time=current_time)
+    return render_template('index2.html', title=title, image=image, current_time=current_time)
+
+@app.route('/index2')
+def index2():
+    """3つの画像表示ページへのリンクがあるindex2"""
+    title = "受信した画像表示"
+    image = capture_image()
+    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('index2.html', title=title, image=image, current_time=current_time)
 
 @app.route('/capture_image', methods=['GET'])
 def get_new_image():
@@ -65,40 +73,63 @@ def get_new_image():
 def process_images():
     """3つの画像（元画像、マスク画像、処理済み画像）を生成"""
     global latest_image
+    print("process_images called")
     if latest_image is None:
+        print("No latest_image available")
         return None, None, None
     
-    # base64文字列をバイト配列に戻す
-    img_data = base64.b64decode(latest_image)
-    nparr = np.frombuffer(img_data, np.uint8)
-    # JPEGバイト列からNumPy配列に変換（BGR形式）
-    img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img_np is None:
+    try:
+        # base64文字列をバイト配列に戻す
+        img_data = base64.b64decode(latest_image)
+        nparr = np.frombuffer(img_data, np.uint8)
+        # JPEGバイト列からNumPy配列に変換（BGR形式）
+        img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_np is None:
+            print("Failed to decode image")
+            return None, None, None
+        
+        print(f"Image shape: {img_np.shape}")
+        
+        # SpaceDetectorで解析実行
+        original_img, masked_img, processed_img = sd.analyze(img_np.copy())
+        
+        print("Analysis completed, encoding images...")
+        
+        # 各画像をbase64エンコード
+        def encode_image(img):
+            if img is None:
+                print("Image is None, cannot encode")
+                return None
+            retval, buffer = cv2.imencode('.jpg', img)
+            if retval:
+                return base64.b64encode(buffer).decode('utf-8')
+            print("Failed to encode image")
+            return None
+        
+        original_b64 = encode_image(original_img)
+        masked_b64 = encode_image(masked_img)
+        processed_b64 = encode_image(processed_img)
+        
+        print(f"Encoding results - Original: {'OK' if original_b64 else 'FAIL'}, Masked: {'OK' if masked_b64 else 'FAIL'}, Processed: {'OK' if processed_b64 else 'FAIL'}")
+        
+        return original_b64, masked_b64, processed_b64
+        
+    except Exception as e:
+        print(f"Error in process_images: {e}")
+        import traceback
+        traceback.print_exc()
         return None, None, None
-    
-    # SpaceDetectorで解析実行
-    original_img, masked_img, processed_img = sd.analyze(img_np.copy())
-    
-    # 各画像をbase64エンコード
-    def encode_image(img):
-        retval, buffer = cv2.imencode('.jpg', img)
-        if retval:
-            return base64.b64encode(buffer).decode('utf-8')
-        return None
-    
-    original_b64 = encode_image(original_img)
-    masked_b64 = encode_image(masked_img)
-    processed_b64 = encode_image(processed_img)
-    
-    return original_b64, masked_b64, processed_b64
 
 @app.route('/process_images', methods=['GET'])
 def get_processed_images():
     """3つの処理済み画像を返す"""
+    print("API /process_images called")
     original_img, masked_img, processed_img = process_images()
     if original_img is None:
+        print("No images to return")
         return jsonify({"error": "画像がありません"}), 404
     
+    print("Returning processed images")
     return jsonify({
         "original": original_img,
         "masked": masked_img,

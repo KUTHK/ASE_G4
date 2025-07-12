@@ -107,6 +107,9 @@
     </div>
 
     <script>
+        // 黒い画像のbase64データ（1x1の黒いピクセル）
+        const blackImageData = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
+        
         function updateImages() {
             // ローディング表示
             document.getElementById('original-image').alt = '読み込み中...';
@@ -117,22 +120,40 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
-                        alert('エラー: ' + data.error);
+                        // エラーの場合は黒い画像を表示
+                        document.getElementById('original-image').src = blackImageData;
+                        document.getElementById('original-image').alt = '画像なし';
+                        document.getElementById('masked-image').src = blackImageData;
+                        document.getElementById('masked-image').alt = '画像なし';
+                        document.getElementById('processed-image').src = blackImageData;
+                        document.getElementById('processed-image').alt = '画像なし';
+                        console.log('画像がありません: ' + data.error);
                         return;
                     }
                     
-                    // 画像を更新
+                    // 画像を更新（データがない場合は黒い画像）
                     if (data.original) {
                         document.getElementById('original-image').src = 'data:image/jpeg;base64,' + data.original;
                         document.getElementById('original-image').alt = '元画像';
+                    } else {
+                        document.getElementById('original-image').src = blackImageData;
+                        document.getElementById('original-image').alt = '画像なし';
                     }
+                    
                     if (data.masked) {
                         document.getElementById('masked-image').src = 'data:image/jpeg;base64,' + data.masked;
                         document.getElementById('masked-image').alt = 'マスク画像';
+                    } else {
+                        document.getElementById('masked-image').src = blackImageData;
+                        document.getElementById('masked-image').alt = '画像なし';
                     }
+                    
                     if (data.processed) {
                         document.getElementById('processed-image').src = 'data:image/jpeg;base64,' + data.processed;
                         document.getElementById('processed-image').alt = '処理済み画像';
+                    } else {
+                        document.getElementById('processed-image').src = blackImageData;
+                        document.getElementById('processed-image').alt = '画像なし';
                     }
                     
                     // 時刻を更新
@@ -141,12 +162,21 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('画像の更新に失敗しました');
+                    // エラーの場合も黒い画像を表示
+                    document.getElementById('original-image').src = blackImageData;
+                    document.getElementById('original-image').alt = '通信エラー';
+                    document.getElementById('masked-image').src = blackImageData;
+                    document.getElementById('masked-image').alt = '通信エラー';
+                    document.getElementById('processed-image').src = blackImageData;
+                    document.getElementById('processed-image').alt = '通信エラー';
                 });
         }
         
-        // ページ読み込み時に自動更新
+        // ページ読み込み時に初期化（黒い画像を表示）
         window.onload = function() {
+            document.getElementById('original-image').src = blackImageData;
+            document.getElementById('masked-image').src = blackImageData;
+            document.getElementById('processed-image').src = blackImageData;
             updateImages();
         };
         

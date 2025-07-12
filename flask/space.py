@@ -109,7 +109,8 @@ class SpaceDetector:
     def mask(self, image, result):
         if not hasattr(result, 'masks') or result.masks is None:
             print("No masks found in the result.")
-            return image
+            # マスクがない場合は元画像をそのまま返す
+            return image.copy(), 0, 0
 
         # extract the segmented area from the YOLO result
         mask_tensor = result.masks.data
@@ -124,8 +125,12 @@ class SpaceDetector:
         masked_img[combined_mask, :] = 0
         
         # extract max and min y cordinate from the mask
-        max_y = np.max(np.where(combined_mask)[0])
-        min_y = np.min(np.where(combined_mask)[0])
+        if np.any(combined_mask):
+            max_y = np.max(np.where(combined_mask)[0])
+            min_y = np.min(np.where(combined_mask)[0])
+        else:
+            max_y = 0
+            min_y = 0
         # print(f"Mask Y coordinates: min={min_y}, max={max_y}")
         return masked_img, max_y, min_y
 
@@ -300,32 +305,40 @@ class SpaceDetector:
 
     def analyze(self, img):
         """メインの解析処理 - 3つの画像を返す"""
-        original_img = img.copy()  # 元画像を保持
-        
-        vertical_lines = self.pillar_inference(img)
-        results, centroids = self.inference(img)
-        masked_img, max_y, min_y = self.mask(img, results[0])
-        print(centroids)
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        try:
+            original_img = img.copy()  # 元画像を保持
+            
+            vertical_lines = self.pillar_inference(img)
+            results, centroids = self.inference(img)
+            masked_img, max_y, min_y = self.mask(img, results[0])
+            print(f"Centroids: {centroids}")
+            print(f"Vertical lines count: {len(vertical_lines)}")
+            
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        item = len(vertical_lines)
-        print(f"検出された縦線の数: {item}")
-        
-        if item > 1:
-            self.distance_per_meter = (vertical_lines[0][0][0] - vertical_lines[-1][0][0]) / ((item-1) * self.pillar_distance)
-            print(f"PIXEL_PER_METER: {self.distance_per_meter}")
+            item = len(vertical_lines)
+            print(f"検出された縦線の数: {item}")
+            
+            if item > 1:
+                self.distance_per_meter = (vertical_lines[0][0][0] - vertical_lines[-1][0][0]) / ((item-1) * self.pillar_distance)
+                print(f"PIXEL_PER_METER: {self.distance_per_meter}")
 
-            # 検出結果の描画
-            for (x1, y1), (x2, y2) in vertical_lines:
-                cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # 検出結果の描画
+                for (x1, y1), (x2, y2) in vertical_lines:
+                    cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-            img, start, end = self.make_line(img, vertical_lines)
-            angles = self.calc_angle(vertical_lines)
-            angle = np.max(angles[0:2]) if len(angles) >= 2 else 0
-            print(f"最大の角度差: {angle:.2f}度")
-            processed_img, cross = self.distances(img, centroids, angle*(-1), start, end)
-        else:
-            processed_img = img.copy()
-        
-        return original_img, masked_img, processed_img
+                img, start, end = self.make_line(img, vertical_lines)
+                angles = self.calc_angle(vertical_lines)
+                angle = np.max(angles[0:2]) if len(angles) >= 2 else 0
+                print(f"最大の角度差: {angle:.2f}度")
+                processed_img, cross = self.distances(img, centroids, angle*(-1), start, end)
+            else:
+                processed_img = img.copy()
+            
+            print("Analysis completed successfully")
+            return original_img, masked_img, processed_img
+            
+        except Exception as e:
+            print(f"Error in analyze: {e}")
+            # エラーが発生した場合は元画像を3つとも返す
+            return img.copy(), img.copy(), img.copy()
