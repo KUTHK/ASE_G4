@@ -299,32 +299,33 @@ class SpaceDetector:
         cv2.destroyAllWindows()
 
     def analyze(self, img):
-        """メインの解析処理"""
+        """メインの解析処理 - 3つの画像を返す"""
+        original_img = img.copy()  # 元画像を保持
+        
         vertical_lines = self.pillar_inference(img)
         results, centroids = self.inference(img)
-        masked, max_y, min_y = self.mask(img, results[0])
-        # self.show_image(masked)
+        masked_img, max_y, min_y = self.mask(img, results[0])
         print(centroids)
-        # res = resize(img, 640)
+        
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-        # vertical_lines, horizontal_lines = detect_lines(gray)
 
         item = len(vertical_lines)
         print(f"検出された縦線の数: {item}")
-        self.distance_per_meter = (vertical_lines[0][0][0] - vertical_lines[-1][0][0]) / ((item-1) * self.pillar_distance)
-        print(f"PIXEL_PER_METER: {self.distance_per_meter}")
+        
+        if item > 1:
+            self.distance_per_meter = (vertical_lines[0][0][0] - vertical_lines[-1][0][0]) / ((item-1) * self.pillar_distance)
+            print(f"PIXEL_PER_METER: {self.distance_per_meter}")
 
-        # 検出結果の描画
-        for (x1, y1), (x2, y2) in vertical_lines:
-            cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        # for (x1, y1), (x2, y2) in horizontal_lines:
-        #     cv2.line(img, (x1, y1), (x2, y2), (255, 0, 0), 2)
+            # 検出結果の描画
+            for (x1, y1), (x2, y2) in vertical_lines:
+                cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-        # project_front(img, vertical_lines, horizontal_lines)
-        img, start, end = self.make_line(img, vertical_lines)
-        angles = self.calc_angle(vertical_lines)
-        # print("各縦線の垂直からの角度差:", angles)
-        angle = np.max(angles[0:2])
-        print(f"最大の角度差: {angle:.2f}度")
-        self.distances(img, centroids, angle*(-1), start, end)
+            img, start, end = self.make_line(img, vertical_lines)
+            angles = self.calc_angle(vertical_lines)
+            angle = np.max(angles[0:2]) if len(angles) >= 2 else 0
+            print(f"最大の角度差: {angle:.2f}度")
+            processed_img, cross = self.distances(img, centroids, angle*(-1), start, end)
+        else:
+            processed_img = img.copy()
+        
+        return original_img, masked_img, processed_img

@@ -8,8 +8,6 @@ import cv2
 import numpy as np
 import base64
 
-import torch
-from ultralytics import YOLO
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
@@ -18,18 +16,19 @@ import capture_pb2
 import capture_pb2_grpc
 
 import space as sp
+from ultralytics import YOLO
 
 app = Flask(__name__, template_folder='templates')
 
 # 受信した画像データを保持するグローバル変数
 latest_image = None
 latest_time = None
-# count = 0
-
-model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
-obb_model = YOLO(r"best_l.pt")
 
 img_path = r"../img/"
+
+seg_model = YOLO("yolov8l-seg.pt")  # YOLOv8のモデルをロード
+obb_model = YOLO(r"best_l.pt")
+sd = sp.SpaceDetector(seg_model=seg_model, obb_model=obb_model)
 
 def capture_image():
     global latest_image
@@ -42,24 +41,6 @@ def capture_image():
     if retval:
         img_str = base64.b64encode(buffer).decode('utf-8')
         return img_str
-    return None
-
-def inference(base64_img):
-    # base64文字列をバイト配列に戻す
-    img_data = base64.b64decode(base64_img)
-    nparr = np.frombuffer(img_data, np.uint8)
-    # JPEGバイト列からNumPy配列に変換（BGR形式）
-    img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img_np is None:
-        return None
-    # YOLO推論（画像の形式はBGRでOK）
-    result = model(img_np, verbose=False)
-    # 結果を画像に描画（annotated image）
-    annotated_img = result[0].plot()
-    # annotated image をJPEGにエンコードしてbase64文字列に変換
-    retval, buffer = cv2.imencode('.jpg', annotated_img)
-    if retval:
-        return base64.b64encode(buffer).decode('utf-8')
     return None
 
 # Flaskのルート定義
@@ -81,15 +62,58 @@ def get_new_image():
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
     return jsonify({"image": image, "current_time": current_time})
 
-# 推論結果を表示するルート追加
-@app.route('/inference', methods=['GET'])
-def inference_image():
-    orig_image = capture_image()
-    if not orig_image:
+def process_images():
+    """3つの画像（元画像、マスク画像、処理済み画像）を生成"""
+    global latest_image
+    if latest_image is None:
+        return None, None, None
+    
+    # base64文字列をバイト配列に戻す
+    img_data = base64.b64decode(latest_image)
+    nparr = np.frombuffer(img_data, np.uint8)
+    # JPEGバイト列からNumPy配列に変換（BGR形式）
+    img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img_np is None:
+        return None, None, None
+    
+    # SpaceDetectorで解析実行
+    original_img, masked_img, processed_img = sd.analyze(img_np.copy())
+    
+    # 各画像をbase64エンコード
+    def encode_image(img):
+        retval, buffer = cv2.imencode('.jpg', img)
+        if retval:
+            return base64.b64encode(buffer).decode('utf-8')
+        return None
+    
+    original_b64 = encode_image(original_img)
+    masked_b64 = encode_image(masked_img)
+    processed_b64 = encode_image(processed_img)
+    
+    return original_b64, masked_b64, processed_b64
+
+@app.route('/process_images', methods=['GET'])
+def get_processed_images():
+    """3つの処理済み画像を返す"""
+    original_img, masked_img, processed_img = process_images()
+    if original_img is None:
         return jsonify({"error": "画像がありません"}), 404
-    # 推論結果の画像を取得
-    inf_image = inference(orig_image)
-    return jsonify({"image": inf_image})
+    
+    return jsonify({
+        "original": original_img,
+        "masked": masked_img,
+        "processed": processed_img
+    })
+
+@app.route('/three_images')
+def three_images():
+    """3つの画像を表示するページ"""
+    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('three_images.html', 
+                         original_image=None, 
+                         masked_image=None, 
+                         processed_image=None, 
+                         current_time=current_time)
 
 # gRPCサーバ実装
 class ImageCaptureServicer(capture_pb2_grpc.ImageCaptureServicer):
