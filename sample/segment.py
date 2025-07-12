@@ -88,7 +88,8 @@ def mask(image, result):
     return masked_img, max_y, min_y
 
 def main():
-    img1 = cv2.imread(r"1000015655.jpg")
+    # img1 = cv2.imread(r"1000015655.jpg")
+    img1 = cv2.imread(r"sample.jpg")
     img2 = cv2.imread(r"1000015657.jpg") 
     
     if img1 is None or img2 is None:
@@ -112,7 +113,10 @@ def main():
     cv2.line(mask1, (0, max_y1), (mask1.shape[1], max_y1), (0, 0, 255), 2)
     cv2.line(mask1, (0, min_y1), (mask1.shape[1], min_y1), (0, 0, 255), 2)
 
-    cv2.imwrite("masked_image1.jpg", mask1)
+    # cv2.imwrite("masked_image1.jpg", mask1)
+    cv2.imshow("Masked Image 1", mask1)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     
     roi = mask1[min_y1:max_y1, :]
     # cv2.imwrite("roi1.jpg", roi)
