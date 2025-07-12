@@ -27,7 +27,7 @@ latest_time = None
 # count = 0
 
 model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
-obb_model = YOLO(r"../sample/OBB/best_l.pt")
+obb_model = YOLO(r"best_l.pt")
 
 img_path = r"../img/"
 
