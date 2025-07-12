@@ -5,7 +5,7 @@ from sklearn.cluster import DBSCAN
 from ultralytics import YOLO
 
 model = YOLO("yolov8l-seg.pt")
-obb_model = YOLO("best.pt")
+obb_model = YOLO("best_l.pt")
 
 PILLER_DISTANCE = 3.5 # m
 PIXEL_PER_METER = None
@@ -156,8 +156,35 @@ def pillar_inference(image):
     results = obb_model(image)
     annoted = results[0].plot()
     
+    vertical_lines = []
+
+    obb_boxes = results[0].obb.xyxyxyxy  # shape: (N, 8)
+    if obb_boxes is not None:
+        for box in obb_boxes:
+            if hasattr(box, "cpu"):
+                box = box.cpu().numpy()
+            pts = np.array(box, dtype=np.int32).reshape(4, 2)
+            # 4辺の長さを計算
+            dists = [np.linalg.norm(pts[i] - pts[(i+1)%4]) for i in range(4)]
+            # 短辺2本のインデックスを取得
+            short_idx = np.argsort(dists)[:2]
+            # 各短辺の中点を計算
+            midpoints = []
+            for idx in short_idx:
+                p1 = pts[idx]
+                p2 = pts[(idx+1)%4]
+                mid = ((p1[0]+p2[0])//2, (p1[1]+p2[1])//2)
+                midpoints.append(mid)
+            # 2つの中点を結ぶ線を描画
+            if len(midpoints) == 2:
+                cv2.line(annoted, midpoints[0], midpoints[1], (0, 0, 255), 2)
+            # 重心も描画（任意）
+            # cx, cy = np.mean(pts, axis=0).astype(int)
+            # cv2.circle(annoted, (cx, cy), 5, (255, 0, 0), -1)
+            vertical_lines.append(midpoints)
+
     show_image(annoted)
-    return results, annoted
+    return vertical_lines
 
 def make_line(img, vertical_lines):
     print("縦線の数:", len(vertical_lines))
@@ -276,10 +303,10 @@ def show_image(image):
 
 def main():
     # 画像の読み込み
-    img = cv2.imread('sample.jpg')
-    # img = cv2.imread('sample2.jpg')
+    # img = cv2.imread('sample.jpg')
+    img = cv2.imread('sample2.jpg')
     # img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
-    p_results, annotated = pillar_inference(img)
+    vertical_lines = pillar_inference(img)
     results, centroids = inference(img)
     masked, max_y, min_y = mask(img, results[0])
     show_image(masked)
@@ -287,7 +314,7 @@ def main():
     # res = resize(img, 640)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # gray = cv2.cvtColor(res, cv2.COLOR_BGR2GRAY)
-    vertical_lines, horizontal_lines = detect_lines(gray)
+    # vertical_lines, horizontal_lines = detect_lines(gray)
 
     item = len(vertical_lines)
     print(f"検出された縦線の数: {item}")
