@@ -5,6 +5,7 @@ from sklearn.cluster import DBSCAN
 from ultralytics import YOLO
 
 model = YOLO("yolov8l-seg.pt")
+obb_model = YOLO("best.pt")
 
 PILLER_DISTANCE = 3.5 # m
 PIXEL_PER_METER = None
@@ -151,6 +152,13 @@ def inference(image):
     print("重心座標リスト:", centroids)
     return results, centroids
 
+def pillar_inference(image):
+    results = obb_model(image)
+    annoted = results[0].plot()
+    
+    show_image(annoted)
+    return results, annoted
+
 def make_line(img, vertical_lines):
     print("縦線の数:", len(vertical_lines))
     Y1 = []
@@ -268,9 +276,10 @@ def show_image(image):
 
 def main():
     # 画像の読み込み
-    # img = cv2.imread('sample.jpg')
+    img = cv2.imread('sample.jpg')
     # img = cv2.imread('sample2.jpg')
-    img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
+    # img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
+    p_results, annotated = pillar_inference(img)
     results, centroids = inference(img)
     masked, max_y, min_y = mask(img, results[0])
     show_image(masked)
