@@ -3,11 +3,12 @@ import cv2
 import numpy as np
 from sklearn.cluster import DBSCAN
 from ultralytics import YOLO
+from sklearn.decomposition import PCA
 
-model = YOLO("yolov8l-seg.pt")
-obb_model = YOLO("best_l.pt")
+model = YOLO(r"../flask/yolov8n-seg.pt")
+obb_model = YOLO(r"../flask/best.pt")
 
-PILLER_DISTANCE = 3.5 # m
+PILLAR_DISTANCE = 3.5 # m
 PIXEL_PER_METER = None
 
 def detect_lines(gray):
@@ -186,6 +187,37 @@ def pillar_inference(image):
     show_image(annoted)
     return vertical_lines
 
+def pillar_inference_pca(image):
+    results = obb_model(image)
+    annoted = results[0].plot()
+    
+    vertical_lines = []
+    obb_boxes = results[0].obb.xyxyxyxy  # shape: (N, 8)
+
+    if obb_boxes is not None:
+        for box in obb_boxes:
+            if hasattr(box, "cpu"):
+                box = box.cpu().numpy()
+            pts = np.array(box, dtype=np.float32).reshape(4, 2)
+
+            # PCA を実行
+            pca = PCA(n_components=2)
+            pca.fit(pts)
+
+            center = np.mean(pts, axis=0)  # 重心（中心点）
+            direction = pca.components_[1]  # 第2主成分：短辺方向（副軸）
+
+            length = 50  # 線の長さ（見た目調整用）
+
+            pt1 = (int(center[0] - direction[0] * length), int(center[1] - direction[1] * length))
+            pt2 = (int(center[0] + direction[0] * length), int(center[1] + direction[1] * length))
+
+            # 中心から短辺方向へ線を描く（＝柱の縦線）
+            cv2.line(annoted, pt1, pt2, (0, 0, 255), 2)
+            vertical_lines.append([pt1, pt2])
+
+    return vertical_lines
+
 def make_line(img, vertical_lines):
     print("縦線の数:", len(vertical_lines))
     Y1 = []
@@ -304,9 +336,10 @@ def show_image(image):
 def main():
     # 画像の読み込み
     # img = cv2.imread('sample.jpg')
-    img = cv2.imread('sample2.jpg')
-    # img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
+    # img = cv2.imread('sample2.jpg')
+    img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
     vertical_lines = pillar_inference(img)
+    # vertical_lines = pillar_inference_pca(img)
     results, centroids = inference(img)
     masked, max_y, min_y = mask(img, results[0])
     show_image(masked)
@@ -318,7 +351,7 @@ def main():
 
     item = len(vertical_lines)
     print(f"検出された縦線の数: {item}")
-    PIXEL_PER_METER = (vertical_lines[0][0][0] - vertical_lines[-1][0][0]) / ((item-1) * PILLER_DISTANCE)
+    PIXEL_PER_METER = (vertical_lines[0][0][0] - vertical_lines[-1][0][0]) / ((item-1) * PILLAR_DISTANCE)
     print(f"PIXEL_PER_METER: {PIXEL_PER_METER}")
 
     # 検出結果の描画

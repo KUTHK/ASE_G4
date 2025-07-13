@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from sklearn.cluster import DBSCAN
 from ultralytics import YOLO
+from sklearn.decomposition import PCA
 
 
 class SpaceDetector:
@@ -188,6 +189,38 @@ class SpaceDetector:
                 vertical_lines.append(midpoints)
 
         # self.show_image(annoted)
+        return vertical_lines
+    
+
+    def pillar_inference_pca(self, image):
+        results = self.obb_model(image)
+        annoted = results[0].plot()
+        
+        vertical_lines = []
+        obb_boxes = results[0].obb.xyxyxyxy  # shape: (N, 8)
+
+        if obb_boxes is not None:
+            for box in obb_boxes:
+                if hasattr(box, "cpu"):
+                    box = box.cpu().numpy()
+                pts = np.array(box, dtype=np.float32).reshape(4, 2)
+
+                # PCA を実行
+                pca = PCA(n_components=2)
+                pca.fit(pts)
+
+                center = np.mean(pts, axis=0)  # 重心（中心点）
+                direction = pca.components_[1]  # 第2主成分：短辺方向（副軸）
+
+                length = 50  # 線の長さ（見た目調整用）
+
+                pt1 = (int(center[0] - direction[0] * length), int(center[1] - direction[1] * length))
+                pt2 = (int(center[0] + direction[0] * length), int(center[1] + direction[1] * length))
+
+                # 中心から短辺方向へ線を描く（＝柱の縦線）
+                cv2.line(annoted, pt1, pt2, (0, 0, 255), 2)
+                vertical_lines.append([pt1, pt2])
+
         return vertical_lines
 
     def make_line(self, img, vertical_lines):

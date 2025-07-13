@@ -26,8 +26,8 @@ latest_time = None
 
 img_path = r"../img/"
 
-seg_model = YOLO("yolov8l-seg.pt")  # YOLOv8のモデルをロード
-obb_model = YOLO(r"best_l.pt")
+seg_model = YOLO("yolov8n-seg.pt")  # YOLOv8のモデルをロード
+obb_model = YOLO(r"best.pt")
 sd = sp.SpaceDetector(seg_model=seg_model, obb_model=obb_model)
 
 def capture_image():
