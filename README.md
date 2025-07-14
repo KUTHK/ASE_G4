@@ -3,6 +3,7 @@
 *Bicycle parking space availability detection system*
 
 # Create server environment
+## Docker
 1.  Download docker image following command.
     
     ```
@@ -21,10 +22,24 @@
     ./run_docker_no_gpu.sh
     ```
 
+## Anaconda
+1. Create conda environment using `requirements_server.txt`
+    if you want to use different name of conda environment, please edit `requirements_server.txt` and change the name of environment in the first line.
+    ```
+    conda env create -f requirements_server.txt
+    ```
+2. Reinstall torch refer to [torch installation page](https://pytorch.org/get-started/locally/).
+    torch==2.6.0 and CUDA 12.6 is used in this project, so please select the version you want to install.
+
+3. Activate the conda environment
+    ```
+    conda activate <your_environment_name>
+    ```
+
 
 # How to run the program
 
 please run `display.py` following command, and check whether you can access the website `http://localhost:5000`.
 ```
-python3 display.py
+python display.py
 ```
