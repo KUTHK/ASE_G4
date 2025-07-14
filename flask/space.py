@@ -116,7 +116,14 @@ class SpaceDetector:
 
         # extract the segmented area from the YOLO result
         mask_tensor = result.masks.data
-        mask_np = mask_tensor.cpu().numpy() if hasattr(mask_tensor, "cpu") else mask_tensor 
+        
+        # GPU/CPU に関係なく numpy 配列に変換
+        if torch.is_tensor(mask_tensor):
+            mask_np = mask_tensor.cpu().numpy()
+        elif hasattr(mask_tensor, "cpu"):
+            mask_np = mask_tensor.cpu().numpy()
+        else:
+            mask_np = mask_tensor
         
         combined_mask = np.zeros(mask_np[0].shape, dtype=bool)
         
@@ -173,8 +180,12 @@ class SpaceDetector:
         obb_boxes = results[0].obb.xyxyxyxy  # shape: (N, 8)
         if obb_boxes is not None:
             for box in obb_boxes:
-                if hasattr(box, "cpu"):
+                # GPU/CPU に関係なく numpy 配列に変換
+                if torch.is_tensor(box):
                     box = box.cpu().numpy()
+                elif hasattr(box, "cpu"):
+                    box = box.cpu().numpy()
+                
                 pts = np.array(box, dtype=np.int32).reshape(4, 2)
                 # 4辺の長さを計算
                 dists = [np.linalg.norm(pts[i] - pts[(i+1)%4]) for i in range(4)]
@@ -190,9 +201,6 @@ class SpaceDetector:
                 # 2つの中点を結ぶ線を描画
                 if len(midpoints) == 2:
                     cv2.line(annoted, midpoints[0], midpoints[1], (0, 0, 255), 2)
-                # 重心も描画（任意）
-                # cx, cy = np.mean(pts, axis=0).astype(int)
-                # cv2.circle(annoted, (cx, cy), 5, (255, 0, 0), -1)
                 vertical_lines.append(midpoints)
 
         # self.show_image(annoted)
