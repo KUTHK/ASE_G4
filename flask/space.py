@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from ultralytics import YOLO
 from sklearn.decomposition import PCA
+import torch
 
 
 class SpaceDetector:
@@ -136,7 +137,10 @@ class SpaceDetector:
         return masked_img, max_y, min_y
 
     def inference(self, image):
-        results = self.seg_model(image)
+        if torch.cuda.is_available():
+            results = self.seg_model(image, device='cuda')
+        else:
+            results = self.seg_model(image)
         annoted = results[0].plot()
         # cv2.imshow('Annotated Image', annoted)
         # cv2.waitKey(0)
@@ -158,7 +162,10 @@ class SpaceDetector:
         return results, centroids
 
     def pillar_inference(self, image):
-        results = self.obb_model(image)
+        if torch.cuda.is_available():
+            results = self.obb_model(image, device='cuda')
+        else:
+            results = self.obb_model(image)
         annoted = results[0].plot()
         
         vertical_lines = []
