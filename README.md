@@ -17,9 +17,15 @@
     ```
     In this shell script, the required directory is mounted in docker container, you can access codes and directories in `app`
 
-    **NOTE** if there is no GPU in your computer or not install NVIDIA driver, please run `run_docker_no_gpu.sh`
+    if there is no GPU in your computer or not install NVIDIA driver, please run `run_docker_no_gpu.sh`
     ```
     ./run_docker_no_gpu.sh
+    ```
+
+    **NOTE** : You have to change the permissions of shell script to executable.
+    ```
+    chmod +x run_docker.sh
+    chmod +x run_docker_no_gpu.sh
     ```
 
 ## Anaconda
