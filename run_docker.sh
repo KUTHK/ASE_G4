@@ -5,14 +5,14 @@ GPU_DEVICE=0
 
 # ホスト側の相対パスを絶対パスに変換
 HOST_IMG_DIR="$(pwd)/img"
-HOST_DATA_DIR="$(pwd)/work"
+HOST_DATA_DIR="$(pwd)/flask"
 
 # コンテナ内のマウント先
 CONTAINER_IMG_DIR="/app/img"
 CONTAINER_DATA_DIR="/app/work"
 
 # ポート設定
-GRPC_PORT=50051
+GRPC_PORT=443
 WEB_PORT=5000
 
 # Dockerイメージ名
@@ -31,7 +31,7 @@ docker run -it \
   --gpus "device=${GPU_DEVICE}" \
   --name "${CONTAINER_NAME}" \
   -p ${WEB_PORT}:5000 \
-  -p ${GRPC_PORT}:50051 \
+  -p ${GRPC_PORT}:443 \
   -v "${HOST_IMG_DIR}:${CONTAINER_IMG_DIR}" \
   -v "${HOST_DATA_DIR}:${CONTAINER_DATA_DIR}" \
   -w /app \
