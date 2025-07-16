@@ -114,7 +114,31 @@
 </head>
 <body>
 
-  <h2 style="text-align: center; color: #333; margin-top: 1rem;">現在の駐輪状況</h2>
+  <h2 style="text-align: center; color: #333; margin-top: 1rem;">混雑予測情報</h2>
+
+  <div style="text-align:center; margin-bottom: 1rem;">
+  <label>曜日:
+    <select id="day-select">
+      <option value="Sun">日曜日</option>
+      <option value="Mon">月曜日</option>
+      <option value="Tue">火曜日</option>
+      <option value="Wed">水曜日</option>
+      <option value="Thu">木曜日</option>
+      <option value="Fri">金曜日</option>
+      <option value="Sat">土曜日</option>
+    </select>
+  </label>
+  <label>時間帯:
+    <select id="time-select">
+      <option value="08:40">08:40</option>
+      <option value="10:20">10:20</option>
+      <option value="12:20">12:20</option>
+      <option value="12:50">12:50</option>
+      <option value="14:20">14:20</option>
+      <option value="16:00">16:00</option>
+    </select>
+  </label>
+</div>
 
 
 <div class="map-container" id="map">
@@ -137,7 +161,24 @@
   </div>
 </div>
 
+
+
+
 <script>
+  // statsData は JSONから読み込んだ駐輪状況データを保持するための変数
+  // ローカルでの確認用に設定
+  /*
+  let statsData = {
+    "Sun": {
+      "08:40": [2, 1, 0, 0, 1, 2, 1, 2, 0],
+      "10:20": [1, 1, 1, 1, 1, 1, 1, 1, 1]
+    }
+  };
+  */
+ //ここまでコメントアウト
+
+   let statsData = {};//初期化
+
   const statusLabels = {
     0: '空き',
     1: '残りわずか',
@@ -158,40 +199,29 @@
     });
   }
 
+  function refreshDisplay() {
+    const day = document.getElementById('day-select').value;
+    const time = document.getElementById('time-select').value;
+    const slotData = statsData?.[day]?.[time];
+    updateSlotsFromData(slotData);
+  }
+
+  document.getElementById('day-select').addEventListener('change', refreshDisplay);
+  document.getElementById('time-select').addEventListener('change', refreshDisplay);
+
   document.addEventListener('DOMContentLoaded', () => {
-    fetch('/api/parking_stats')
+    refreshDisplay();
+
+    fetch('/api/calculateparking')
       .then(response => response.json())
       .then(data => {
-        updateSlotsFromData(data); // 初期表示
+        statsData = data;
+        refreshDisplay();
       })
       .catch(error => {
-        console.error('スロット状態の読み込みに失敗:', error);
-        updateSlotsFromData(); // グレー表示
+        console.error('JSONの読み込みに失敗しました:', error);
+        updateSlotsFromData(); // すべてグレー表示に
       });
-
-    // 情報表示用の吹き出し
-    const info = document.createElement('div');
-    info.id = 'slot-info';
-    info.className = 'slot-info';
-    document.body.appendChild(info);
-
-    document.querySelectorAll('.slot').forEach(slot => {
-      slot.addEventListener('click', () => {
-        const id = slot.dataset.id;
-        const label = slot.classList.contains('vacant') ? '空き'
-                    : slot.classList.contains('few') ? '残りわずか'
-                    : slot.classList.contains('occupied') ? '満車'
-                    : '不明（データなし）';
-        info.textContent = `スロット ${id}：${label}`;
-        info.style.display = 'block';
-      });
-    });
-
-    document.body.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('slot')) {
-        info.style.display = 'none';
-      }
-    });
   });
 </script>
 
