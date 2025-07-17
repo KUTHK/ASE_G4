@@ -532,7 +532,8 @@ def main():
     global PIXEL_PER_METER_ARRAY, PILLAR_X_COORDS
     
     # 画像の読み込み
-    img = cv2.imread(r"C:\Users\Light6\ASE_G4\sample\output.jpg")
+    # img = cv2.imread(r"C:\Users\Light6\ASE_G4\sample\output.jpg")
+    img = cv2.imread(r"output.jpg")
     
     if img is None:
         print("画像が読み込めませんでした。パスを確認してください。")

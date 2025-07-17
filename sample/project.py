@@ -4,12 +4,14 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 from ultralytics import YOLO
 from sklearn.decomposition import PCA
+from numpy.polynomial import Polynomial
 
 model = YOLO(r"../flask/yolov8n-seg.pt")
 obb_model = YOLO(r"../flask/best.pt")
 
 PILLAR_DISTANCE = 3.5 # m
 PIXEL_PER_METER = None
+PILLER_X_COORDS = []
 
 def detect_lines(gray):
 
@@ -328,6 +330,157 @@ def distances(img, centroids, angle, start, end):
     return img, cross
 
 
+def calculate_pillar_roof_intersections(vertical_lines, start, end):
+
+    global PIXEL_PER_METER_ARRAY, PILLAR_X_COORDS
+    
+    if len(vertical_lines) < 2:
+        print("Pillar数が不足しています（2個以上必要）")
+        return None, None
+    
+    # roof線の方程式: y = m*x + b
+    x0, y0 = start
+    x1, y1 = end
+    if x1 != x0:
+        m = (y1 - y0) / (x1 - x0)
+        b = y0 - m * x0
+    else:
+        print("Roof線が垂直なため計算できません")
+        return None, None
+    
+    # 各pillarとroof線の交点を計算
+    pillar_roof_points = []
+    for i, ((px1, py1), (px2, py2)) in enumerate(vertical_lines):
+        # pillar線の中点のx座標を使用
+        pillar_x = (px1 + px2) / 2
+        # roof線上でのy座標を計算
+        roof_y = m * pillar_x + b
+        pillar_roof_points.append((pillar_x, roof_y))
+        print(f"Pillar {i+1} とroof線の交点: ({pillar_x:.1f}, {roof_y:.1f})")
+    
+    # x座標順にソート
+    pillar_roof_points.sort(key=lambda p: p[0])
+    pillar_x_coords = [p[0] for p in pillar_roof_points]
+    
+    # 相邻pillar间的像素距离を計算
+    pixel_distances = []
+    for i in range(len(pillar_x_coords) - 1):
+        pixel_dist = abs(pillar_x_coords[i+1] - pillar_x_coords[i])
+        pixel_distances.append(pixel_dist)
+    
+    # 各区间的pixel_per_meter比例を計算
+    pixel_per_meter_array = []
+    for pixel_dist in pixel_distances:
+        ppm = pixel_dist / PILLAR_DISTANCE
+        pixel_per_meter_array.append(ppm)
+    
+    print(f"\nPillar roof線交点のx座標: {[f'{x:.1f}' for x in pillar_x_coords]}")
+    print(f"相邻pillar间像素距離: {[f'{d:.1f}' for d in pixel_distances]}")
+    print(f"各区間のpixel_per_meter: {[f'{ppm:.2f}' for ppm in pixel_per_meter_array]}")
+
+    PIXEL_PER_METER_ARRAY = pixel_per_meter_array
+    # PIXEL_PER_METER_ARRAY = [ppm * 0.01 for ppm in pixel_per_meter_array] 
+    PILLAR_X_COORDS = pillar_x_coords
+    
+    return pixel_per_meter_array, pillar_x_coords
+
+def interpolate_pixel_per_meter(x_position):
+    """
+    x座標位置を補間して、その位置のpixel_per_meter値を取得します
+    """
+    global PIXEL_PER_METER_ARRAY, PILLAR_X_COORDS
+    
+    if PILLAR_X_COORDS is None or PIXEL_PER_METER_ARRAY is None:
+        return None
+    
+    if len(PILLAR_X_COORDS) < 2 or len(PIXEL_PER_METER_ARRAY) == 0:
+        return None
+    
+    # x_positionが最初の柱の前の場合は、最初の間隔の値を使用します
+    if x_position <= PILLAR_X_COORDS[0]:
+        return PIXEL_PER_METER_ARRAY[0]
+    
+    # x_positionが最後の柱の後にある場合は、最後の間隔の値を使用します
+    if x_position >= PILLAR_X_COORDS[-1]:
+        return PIXEL_PER_METER_ARRAY[-1]
+
+    # x_positionが属する区間を見つける
+    for i in range(len(PILLAR_X_COORDS) - 1):
+        if PILLAR_X_COORDS[i] <= x_position <= PILLAR_X_COORDS[i+1]:
+            # その区間のpixel_per_meter値を使用
+            if i < len(PIXEL_PER_METER_ARRAY):
+                return PIXEL_PER_METER_ARRAY[i]
+            else:
+                return PIXEL_PER_METER_ARRAY[-1]
+    
+    return PIXEL_PER_METER_ARRAY[-1]
+
+def world_distance(x1, x2):
+    global PIXEL_PER_METER_ARRAY, PILLAR_X_COORDS
+
+    if PILLAR_X_COORDS is None or PIXEL_PER_METER_ARRAY is None:
+        print("Pillar情報が初期化されていません")
+        return None
+    
+    if len(PILLAR_X_COORDS) < 2 or len(PIXEL_PER_METER_ARRAY) == 0:
+        print("Pillar情報が不足しています")
+        return None
+    
+    # x座標を昇順にソート
+    start_x = min(x1, x2)
+    end_x = max(x1, x2)
+    
+    # ピクセル距離を計算
+    pixel_distance = end_x - start_x
+    
+    # 2つの座標が同じ区間にある場合
+    for i in range(len(PILLAR_X_COORDS) - 1):
+        if PILLAR_X_COORDS[i] <= start_x <= PILLAR_X_COORDS[i+1] and \
+           PILLAR_X_COORDS[i] <= end_x <= PILLAR_X_COORDS[i+1]:
+            # 同じ区間なので、その区間のpixel_per_meter値を使用
+            if i < len(PIXEL_PER_METER_ARRAY):
+                ppm = PIXEL_PER_METER_ARRAY[i]
+                real_distance = pixel_distance / ppm
+                print(f"区間 {i+1} での距離計算: {pixel_distance:.1f}px / {ppm:.2f} = {real_distance:.2f}m")
+                return real_distance
+    
+    # 複数の区間にまたがる場合
+    total_real_distance = 0.0
+    current_x = start_x
+    
+    print(f"複数区間にまたがる計算: {start_x:.1f} から {end_x:.1f}")
+    
+    for i in range(len(PILLAR_X_COORDS) - 1):
+        # 現在の区間の範囲
+        section_start = PILLAR_X_COORDS[i]
+        section_end = PILLAR_X_COORDS[i+1]
+        
+        # この区間に重複があるかチェック
+        overlap_start = max(current_x, section_start)
+        overlap_end = min(end_x, section_end)
+        
+        if overlap_start < overlap_end:
+            # 重複部分のピクセル距離
+            section_pixel_distance = overlap_end - overlap_start
+            
+            # この区間のpixel_per_meter値
+            if i < len(PIXEL_PER_METER_ARRAY):
+                ppm = PIXEL_PER_METER_ARRAY[i]
+                section_real_distance = section_pixel_distance / ppm
+                total_real_distance += section_real_distance
+                
+                print(f"区間 {i+1} ({section_start:.1f}-{section_end:.1f}): "
+                      f"{section_pixel_distance:.1f}px / {ppm:.2f} = {section_real_distance:.2f}m")
+            
+            current_x = overlap_end
+            
+            # 終点に達した場合は終了
+            if current_x >= end_x:
+                break
+    
+    print(f"総実世界距離: {total_real_distance:.2f}m")
+    return total_real_distance
+
 def show_image(image):
     cv2.imshow('Image', image)
     cv2.waitKey(0)
@@ -336,8 +489,8 @@ def show_image(image):
 def main():
     # 画像の読み込み
     # img = cv2.imread('sample.jpg')
-    # img = cv2.imread('sample2.jpg')
-    img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
+    img = cv2.imread('sample2.jpg')
+    # img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
     vertical_lines = pillar_inference(img)
     # vertical_lines = pillar_inference_pca(img)
     results, centroids = inference(img)
@@ -351,6 +504,9 @@ def main():
 
     item = len(vertical_lines)
     print(f"検出された縦線の数: {item}")
+    print(vertical_lines)
+    # x_coords = []
+    
     PIXEL_PER_METER = (vertical_lines[0][0][0] - vertical_lines[-1][0][0]) / ((item-1) * PILLAR_DISTANCE)
     print(f"PIXEL_PER_METER: {PIXEL_PER_METER}")
 
@@ -362,11 +518,31 @@ def main():
 
     # project_front(img, vertical_lines, horizontal_lines)
     img, start, end = make_line(img, vertical_lines)
+    result1, result2 = calculate_pillar_roof_intersections(vertical_lines, start, end)
+    print(f"pixel_per_meter_array: {result1}")
+    print(f"pillar_x_coords: {result2}")
+
+    real_pillar = [i* PILLAR_DISTANCE for i in range(len(result2))]
+    p = Polynomial.fit(result2, real_pillar, deg=2)
+    print(f"Polynomial coefficients: {p.coef}")
+
     angles = calc_angle(vertical_lines)
     # print("各縦線の垂直からの角度差:", angles)
     angle = np.max(angles[0:2])
     print(f"最大の角度差: {angle:.2f}度")
-    distances(img, centroids, angle*(-1), start, end)
+    img, cross = distances(img, centroids, angle*(-1), start, end)
+    cross = sorted(cross, key=lambda p: p[0])  # x座標順にソート
+    print(cross)
+    for i in range(len(cross)-1):
+        x1, y1 = cross[i]
+        x2, y2 = cross[i+1]
+        # 交点間の距離を計算
+        # dist = world_distance(x1, x2)
+        dist = p(x2) - p(x1)
+        if dist is not None:
+            print(f"distance between bicycle {i+1} and bicycle {i+2}: {dist:.2f} m")
+        else:
+            print(f"distance between bicycle {i+1} and bicycle {i+2}: failed")
 
 
 if __name__ == "__main__":
