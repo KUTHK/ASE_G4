@@ -22,6 +22,7 @@ import space as sp
 app = Flask(__name__, template_folder='templates')
 
 # 受信した画像データを保持するグローバル変数
+
 latest_images = {
     "camera1": None,
     "camera2": None
@@ -39,6 +40,7 @@ processed_images = {
     "camera2": None
 }
 parking_arrays = [-1, -1, -1, -1, -1, -1, -1, -1, -1]
+# parking_arrays = [2, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
 
@@ -48,6 +50,7 @@ img_path_2 = r"../img/camera2/"
 seg_model = YOLO("yolov8n-seg.pt")  # セグメンテーションモデル
 obb_model = YOLO(r"best.pt")  # OBBモデル
 sd = sp.SpaceDetector(seg_model=seg_model, obb_model=obb_model)
+
 
 def capture_image(camera_id):
     global latest_images
@@ -70,12 +73,24 @@ def create_black():
         return img_str
     return None
 
+black = create_black()
+latest_images["camera1"] = black
+latest_images["camera2"] = black
+
 
 # Flaskのルート定義
 
 @app.route('/')
 def index():
+    # image1 = create_black()
+    # image2 = create_black()
+    # latest_images["camera1"] = image1
+    # latest_images["camera2"] = image2
     return render_template('ParkingMap2.html')
+
+@app.route('/archive')
+def archive():
+    return render_template('ParkingMapArchive.html')
 
 @app.route('/api/parking_stats')
 def calculate_parking():
@@ -117,6 +132,12 @@ def result_images():
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
     return render_template('result_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
 
+@app.route('/api/camera1_image')
+def get_camera1_image():
+    image = latest_images.get("camera1")
+    if not image:
+        image = create_black()
+    return jsonify({"image": image})
 
 @app.route('/capture_image', methods=['GET'])
 def get_all_images():

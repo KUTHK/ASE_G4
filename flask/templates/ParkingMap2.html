@@ -127,6 +127,23 @@
       display: none;
       z-index: 100;
     }
+    .camera-floating {
+      position: absolute;
+      display: none;
+      background: white;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      padding: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      z-index: 200;
+      white-space: nowrap;
+    }
+    .camera-floating img {
+      max-width: 500px;
+      max-height: 425px;
+      margin: 2px;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
@@ -170,6 +187,7 @@
   </div>
 
 </div>
+<div id="camera-floating" class="camera-floating"></div>
 
 <script>
   const statusLabels = {
@@ -232,21 +250,56 @@
     info.className = 'slot-info';
     document.body.appendChild(info);
 
+    const camFloat = document.getElementById('camera-floating');
+
     document.querySelectorAll('.slot').forEach(slot => {
-      slot.addEventListener('click', () => {
+      slot.addEventListener('click', e => {
         const id = slot.dataset.id;
         const label = slot.classList.contains('vacant') ? '空き'
-                    : slot.classList.contains('few') ? '残りわずか'
-                    : slot.classList.contains('occupied') ? '満車'
+                    : slot.classList.contains('few')    ? '残りわずか'
+                    : slot.classList.contains('occupied')? '満車'
                     : '不明（データなし）';
+        // 吹き出し表示（infoは任意で表示可）
         info.textContent = `スロット ${id}：${label}`;
         info.style.display = 'block';
+
+        // データなし（error）でなければカメラ画像（camera1のみ）を表示
+        if (!slot.classList.contains('error')) {
+          fetch('/api/camera1_image')
+            .then(res => res.json())
+            .then(data => {
+              // camera1 の画像をフローティングに挿入
+              camFloat.innerHTML = `<img src="data:image/jpeg;base64,${data.image}" alt="Cam1">`;
+              // ボタン（slot）近くに配置
+              const rect = e.target.getBoundingClientRect();
+              camFloat.style.top  = (window.scrollY + rect.bottom + 5) + 'px';
+              camFloat.style.left = (window.scrollX + rect.left)   + 'px';
+              camFloat.style.display = 'block';
+
+              const camRect = camFloat.getBoundingClientRect();
+              if (camRect.right > window.innerWidth) {
+                  const newLeft = window.innerWidth - camRect.width - 100;
+                  camFloat.style.left = newLeft + 'px';
+              }
+              if (camRect.bottom > window.innerHeight) {
+                  const newTop = window.innerHeight - camRect.height - 300;
+                  camFloat.style.top = newTop + 'px';
+              }
+            })
+            .catch(() => {
+              camFloat.style.display = 'none';
+            });
+        } else {
+          camFloat.style.display = 'none';
+        }
       });
     });
 
-    document.body.addEventListener('click', (e) => {
+    // スロット以外をクリックしたら吹き出し・フローティングを非表示
+    document.body.addEventListener('click', e => {
       if (!e.target.classList.contains('slot')) {
         info.style.display = 'none';
+        camFloat.style.display = 'none';
       }
     });
   });

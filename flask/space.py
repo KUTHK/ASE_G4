@@ -146,7 +146,11 @@ class SpaceDetector:
 
     def inference(self, image):
         if torch.cuda.is_available():
-            results = self.seg_model(image, device='cuda')
+            # print things YOLO can detect
+            # print("YOLO can detect:", self.seg_model.names)
+            # results = self.seg_model(image, device='cuda')
+            # inference only bicycle
+            results = self.seg_model(image, device='cuda', classes=[1])
         else:
             results = self.seg_model(image)
         annoted = results[0].plot()
