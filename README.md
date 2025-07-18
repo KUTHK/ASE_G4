@@ -2,7 +2,9 @@
 
 *Bicycle parking space availability detection system*
 <!-- input image on center -->
-<img src="sample/result.jpg" alt="Input Image" width="500" style="position: relative; left: 50%; transform: translateX(-50%);" />
+<p align="center">
+    <img src="sample/result.jpg" alt="Input Image" width="500"/>
+</p>
 
 # Create server environment
 ## Docker
