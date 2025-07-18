@@ -30,15 +30,15 @@ latest_times = {
     "camera1": None,
     "camera2": None
 }
+masked_images = {
+    "camera1": None,
+    "camera2": None
+}
 processed_images = {
     "camera1": None,
     "camera2": None
 }
-parking_arrays = {
-    "camera1": None,
-    "camera2": None
-}
-# count = 0
+parking_arrays = [-1, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
 
@@ -75,7 +75,19 @@ def create_black():
 
 @app.route('/')
 def index():
-    title = "受信した画像表示"
+    return render_template('ParkingMap2.html')
+
+@app.route('/api/parking_stats')
+def calculate_parking():
+    # 仮の配列を直接返す
+    # -1: 灰色, 0: 赤色, 1: 黄色, 2: 緑色
+    # dummy_data = [2, -1, -1, -1, -1, -1, 0, -1, 1]  # 長さ9の配列
+    # dummy_data = [0, 0, 0, 0, 0, 0, 0, 0, 0]  # 長さ9の配列
+    return jsonify(parking_arrays)
+
+@app.route('/show_images')
+def show_images():
+    title = "取得画像表示"
     # image1 = capture_image("camera1")
     # image2 = capture_image("camera2")
     image1 = latest_images["camera1"] if latest_images["camera1"] else create_black()
@@ -83,7 +95,28 @@ def index():
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # +9hする（日本時間）
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
-    return render_template('index_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
+    return render_template('show_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
+
+@app.route('/mask_images')
+def mask_images():
+    title = "マスク画像表示"
+    image1 = masked_images["camera1"] if masked_images["camera1"] else create_black()
+    image2 = masked_images["camera2"] if masked_images["camera2"] else create_black()
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # +9hする（日本時間）
+    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('mask_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
+
+@app.route('/result_images')
+def result_images():
+    title = "結果画像表示"
+    image1 = processed_images["camera1"] if processed_images["camera1"] else create_black()
+    image2 = processed_images["camera2"] if processed_images["camera2"] else create_black()
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # +9hする（日本時間）
+    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    return render_template('result_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
+
 
 @app.route('/capture_image', methods=['GET'])
 def get_all_images():
@@ -103,8 +136,8 @@ def get_all_images():
     #     "camera2": {"image": image2, "current_time": current_time}
     # })
     return render_template('index_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
-    
-def process_images(image):
+
+def process_images(image, camera_id):
     """3つの画像（元画像、マスク画像、処理済み画像）を生成"""
     # global latest_image
     # print("process_images called")
@@ -124,9 +157,13 @@ def process_images(image):
             return None, None, None
         
         print(f"Image shape: {img_np.shape}")
-        
+        ind = None
+        if camera_id == "camera1":
+            ind = 2
+        elif camera_id == "camera2":
+            ind = 3
         # SpaceDetectorで解析実行
-        original_img, masked_img, processed_img, parking_array = sd.analyze(img_np.copy())
+        original_img, masked_img, processed_img, parking_array = sd.analyze(img_np.copy(), ind)
         
         print("Analysis completed, encoding images...")
         
@@ -182,10 +219,12 @@ class ImageCaptureServicer(capture_pb2_grpc.ImageCaptureServicer):
             print(f"Saved image to {filename}")
             print(f"Received image id: {camera_id} at {capture_data.timestamp}")
             try:
-                original, masked, processed, parking_array = process_images(img_b64)
+                original, masked, processed, parking_array = process_images(img_b64, camera_id)
                 if original is not None:
                     latest_images[camera_id] = original
                     processed_images[camera_id] = processed
+                    masked_images[camera_id] = masked
+                    parking_arrays = parking_array
                     print(f"Processed image for {camera_id} successfully")
                 else:
                     print(f"Failed to process image for {camera_id}")

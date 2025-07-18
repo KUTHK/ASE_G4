@@ -264,6 +264,7 @@ def make_line(img, vertical_lines):
         # 端から端まで直線を描画
         cv2.line(img, (x_left, y_left), (x_right, y_right), (0, 0, 255), 2)
     # show_image(img)
+    # cv2.imwrite("result.jpg", img)
     return img, (x_left, y_left), (x_right, y_right)
     
 
@@ -327,6 +328,7 @@ def distances(img, centroids, angle, start, end):
         print(f"自転車{i+1}: ({cx},{cy}) → 屋根交点: ({int(x_cross)},{int(y_cross)})")
 
     show_image(img)
+    cv2.imwrite("result.jpg", img)
     return img, cross
 
 
@@ -488,8 +490,8 @@ def show_image(image):
 
 def main():
     # 画像の読み込み
-    # img = cv2.imread('sample.jpg')
-    img = cv2.imread('sample2.jpg')
+    img = cv2.imread('sample.jpg')
+    # img = cv2.imread('sample2.jpg')
     # img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
     vertical_lines = pillar_inference(img)
     # vertical_lines = pillar_inference_pca(img)

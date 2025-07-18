@@ -252,10 +252,10 @@ class SpaceDetector:
                 tops.append((x1, y1))
             else:
                 tops.append((x2, y2))
-        if np.sum(Y1) > np.sum(Y2):
-            print("上端のY座標:", Y2)
-        else:
-            print("上端のY座標:", Y1)
+        # if np.sum(Y1) > np.sum(Y2):
+        #     print("上端のY座標:", Y2)
+        # else:
+        #     print("上端のY座標:", Y1)
 
         # x座標順にソート
         tops = sorted(tops, key=lambda p: p[0])
@@ -391,8 +391,8 @@ class SpaceDetector:
             ppm = pixel_dist / self.pillar_distance
             pixel_per_meter_array.append(ppm)
         
-        print(f"\nPillar roof線交点のx座標: {[f'{x:.1f}' for x in pillar_x_coords]}")
-        print(f"相邻pillar间像素距離: {[f'{d:.1f}' for d in pixel_distances]}")
+        # print(f"\nPillar roof線交点のx座標: {[f'{x:.1f}' for x in pillar_x_coords]}")
+        # print(f"相邻pillar间像素距離: {[f'{d:.1f}' for d in pixel_distances]}")
         print(f"各区間のpixel_per_meter: {[f'{ppm:.2f}' for ppm in pixel_per_meter_array]}")
 
         PIXEL_PER_METER_ARRAY = pixel_per_meter_array
@@ -497,13 +497,52 @@ class SpaceDetector:
         
         print(f"総実世界距離: {total_real_distance:.2f}m")
         return total_real_distance
+    
+    def parking_judge(self, cross, p):
+        REQUIRED_SPACE = 1.0
+        
+        total_capacity = 0
+        usable_spaces = []
+        max_continuous_space = 0
+        
+        for i in range(len(cross)-1):
+            x1, y1 = cross[i]
+            x2, y2 = cross[i+1]
+            dist = p(x2) - p(x1)
+            
+            if dist is not None and dist > 0:
+                print(f"区間 {i+1}: 距離 {dist:.2f}m")
+                
+                if dist >= 1.0:  # 1m以上を有効スペースとする
+                    usable_spaces.append(dist)
+                    max_continuous_space = max(max_continuous_space, dist)
+                    
+                    # この区間の駐輪可能台数
+                    bikes_in_section = int(dist / REQUIRED_SPACE)
+                    total_capacity += bikes_in_section
+                    # print(f"  → 駐輪可能台数: {bikes_in_section}台")
+        
+        print(f"総駐輪可能台数: {total_capacity}台")
+        print(f"有効スペース数: {len(usable_spaces)}箇所")
+        print(f"最大連続スペース: {max_continuous_space:.2f}m")
+        
+        # より細かい判定基準
+        if total_capacity >= 4 or max_continuous_space >= 4.0:
+            return 2  # 緑：余裕
+        elif total_capacity >= 2 or (total_capacity >= 1 and len(usable_spaces) >= 2):
+            return 1  # 黄：すきま空いてるけど、おけ
+        elif total_capacity >= 1:
+            return 1  # 黄：1台しかむり
+        else:
+            return 0  # 赤：駐輪できない
+        
 
     def show_image(self, image):
         cv2.imshow('Image', image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def analyze(self, img):
+    def analyze(self, img, ind):
         """メインの解析処理 - 3つの画像を返す"""
         try:
             original_img = img.copy()  # 元画像を保持
@@ -536,28 +575,12 @@ class SpaceDetector:
                 
                 angles = self.calc_angle(vertical_lines)
                 angle = np.max(angles[0:2]) if len(angles) >= 2 else 0
-                print(f"最大の角度差: {angle:.2f}度")
+                # print(f"最大の角度差: {angle:.2f}度")
                 processed_img, cross = self.distances(img, centroids, angle*(-1), start, end)
                 cross = sorted(cross, key=lambda p: p[0])  # x座標でソート
-                space_count = 0
-                for i in range(len(cross)-1):
-                    x1, y1 = cross[i]
-                    x2, y2 = cross[i+1]
-                    # 交点間の距離を計算
-                    # dist = world_distance(x1, x2)
-                    dist = p(x2) - p(x1)
-                    if dist is not None:
-                        print(f"distance between bicycle {i+1} and bicycle {i+2}: {dist:.2f} m")
-                        if dist >= 1.0: space_count += 1
-                    else:
-                        print(f"distance between bicycle {i+1} and bicycle {i+2}: failed")
-                        
-                if space_count >= 2:
-                    parking_array = [2, -1, -1, -1, -1, -1, -1, -1, -1]
-                elif space_count == 1:
-                    parking_array = [1, -1, -1, -1, -1, -1, -1, -1, -1]
-                elif space_count == 0:
-                    parking_array = [0, -1, -1, -1, -1, -1, -1, -1, -1]
+
+                parking_status = self.parking_judge(cross, p)
+                parking_array[ind] = parking_status
             else:
                 processed_img = img.copy()
                 parking_array = [-1, -1, -1, -1, -1, -1, -1, -1, -1]

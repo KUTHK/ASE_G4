@@ -1,6 +1,8 @@
 **Advanced Software Engineering Group 4**
 
 *Bicycle parking space availability detection system*
+<!-- input image on center -->
+<img src="sample/result.jpg" alt="Input Image" width="500" style="position: relative; left: 50%; transform: translateX(-50%);" />
 
 # Create server environment
 ## Docker
