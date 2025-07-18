@@ -87,6 +87,7 @@ def index():
 
 @app.route('/capture_image', methods=['GET'])
 def get_all_images():
+    title = "受信した画像表示"
     # image1 = capture_image("camera1")
     # image2 = capture_image("camera2")
     # original, masked, processed, parking_array = process_images(image1)
@@ -95,12 +96,13 @@ def get_all_images():
     image2 = latest_images["camera2"] if latest_images["camera2"] else create_black()
     # print(f"Parking array for camera1: {parking_array}")
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
-    return jsonify({
-        # "camera1": {"image": image1, "current_time": current_time},
-        # "camera2": {"image": image2, "current_time": current_time}
-        "camera1": {"image": image1, "current_time": current_time},
-        "camera2": {"image": image2, "current_time": current_time}
-    })
+    # return jsonify({
+    #     # "camera1": {"image": image1, "current_time": current_time},
+    #     # "camera2": {"image": image2, "current_time": current_time}
+    #     "camera1": {"image": image1, "current_time": current_time},
+    #     "camera2": {"image": image2, "current_time": current_time}
+    # })
+    return render_template('index_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
     
 def process_images(image):
     """3つの画像（元画像、マスク画像、処理済み画像）を生成"""
