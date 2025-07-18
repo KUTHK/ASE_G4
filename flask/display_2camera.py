@@ -106,7 +106,8 @@ class ImageCaptureServicer(capture_pb2_grpc.ImageCaptureServicer):
             os.makedirs(img_path_2)
         for capture_data in request_iterator:
             # 受信したJPEGバイト列をbase64エンコードして保存
-            camera_id = capture_data.camera_id
+            # camera_id = capture_data.camera_id
+            camera_id = capture_data.message
             img_b64 = base64.b64encode(capture_data.image_data).decode('utf-8')
             latest_images[camera_id] = img_b64
             latest_times[camera_id] = capture_data.timestamp

@@ -7,7 +7,11 @@ import capture_pb2_grpc
 
 # please edit if you use AWS
 # host = '172.21.48.46'
-host = '54.211.126.57'
+# host = '54.211.126.57'
+host = '100.69.96.32'
+
+CAMERA_ID_1 = "camera1"
+CAMERA_ID_2 = "camera2"
 
 def capture_data_generator(cap0, cap1):
     msg_id = 0
@@ -31,7 +35,7 @@ def capture_data_generator(cap0, cap1):
                 id=msg_id,
                 command="request",
                 image_data=image_data0,
-                message="camera 0",
+                message=CAMERA_ID_1,
                 timestamp=datetime.datetime.now().isoformat()
             )
             
@@ -44,7 +48,7 @@ def capture_data_generator(cap0, cap1):
                 id=msg_id + 1,
                 command="request",
                 image_data=image_data1,
-                message="camera 1",
+                message=CAMERA_ID_2,
                 timestamp=datetime.datetime.now().isoformat()
             )
             

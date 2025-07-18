@@ -47,10 +47,10 @@ def capture_data_generator(cap):
             # CaptureDataメッセージを作成
             capture_data = capture_pb2.CaptureData(
                 id=msg_id,
-                camera_id=CAMERA_ID,
+                # camera_id=CAMERA_ID,
                 command="request",
                 image_data=image_data,
-                message="Frame captured",
+                message=CAMERA_ID,
                 timestamp=now.isoformat()
             )
             
