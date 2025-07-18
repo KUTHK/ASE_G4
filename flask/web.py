@@ -8,7 +8,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 
 @app.route('/')
 def index():
-    return render_template('ParkingMap.html')
+    return render_template('ParkingMap2.html')
 
 @app.route('/archive')
 def archive():
@@ -26,10 +26,11 @@ def api_calculate_parking():
 
 @app.route('/api/parking_stats')
 def calculate_parking():
-    path = os.path.join(DATA_DIR, 'parking_stats.json')
-    with open(path, encoding='utf-8') as f:
-        data = json.load(f)
-    return jsonify(data)
+    # 仮の配列を直接返す
+    # -1: 灰色, 0: 赤色, 1: 黄色, 2: 緑色
+    # dummy_data = [2, -1, -1, -1, -1, -1, 0, -1, 1]  # 長さ9の配列
+    dummy_data = [0, 0, 0, 0, 0, 0, 0, 0, 0]  # 長さ9の配列
+    return jsonify(dummy_data)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)

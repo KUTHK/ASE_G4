@@ -9,7 +9,7 @@ from numpy.polynomial import Polynomial
 model = YOLO(r"../flask/yolov8n-seg.pt")
 obb_model = YOLO(r"../flask/best.pt")
 
-PILLAR_DISTANCE = 3.5 # m
+PILLAR_DISTANCE = 2.8 # m
 PIXEL_PER_METER = None
 PILLER_X_COORDS = []
 

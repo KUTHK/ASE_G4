@@ -9,8 +9,8 @@ import os
 CAMERA_ID = "camera1"
 
 # please edit if you use AWS
-# host = 'localhost'  # Use 'localhost' for local testing or replace with your server's IP address
-host = '100.69.96.32'
+host = 'localhost'  # Use 'localhost' for local testing or replace with your server's IP address
+# host = '100.69.96.32'
 # host = '54.211.126.57'
 
 

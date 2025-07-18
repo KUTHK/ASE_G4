@@ -46,7 +46,7 @@
     <script>
         function refreshAll() {
             // window.location.reload();
-            fetch('/capture_image')
+            fetch('/')
             .then(res => res.json())
             .then(data => {
                 document.getElementById("camera1Image").src = "data:image/jpeg;base64," + data.camera1.image;

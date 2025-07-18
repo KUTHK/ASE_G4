@@ -17,17 +17,37 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 import capture_pb2
 import capture_pb2_grpc
 
+import space as sp
+
 app = Flask(__name__, template_folder='templates')
 
 # 受信した画像データを保持するグローバル変数
-latest_images = {}  # カメラIDをキー、base64画像を値に
-latest_times = {}
+latest_images = {
+    "camera1": None,
+    "camera2": None
+}
+latest_times = {
+    "camera1": None,
+    "camera2": None
+}
+processed_images = {
+    "camera1": None,
+    "camera2": None
+}
+parking_arrays = {
+    "camera1": None,
+    "camera2": None
+}
 # count = 0
 
-model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
+# model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
 
 img_path_1 = r"../img/camera1/"
 img_path_2 = r"../img/camera2/"
+
+seg_model = YOLO("yolov8n-seg.pt")  # セグメンテーションモデル
+obb_model = YOLO(r"best.pt")  # OBBモデル
+sd = sp.SpaceDetector(seg_model=seg_model, obb_model=obb_model)
 
 def capture_image(camera_id):
     global latest_images
@@ -42,31 +62,24 @@ def capture_image(camera_id):
         return img_str
     return None
 
-def inference(base64_img):
-    # base64文字列をバイト配列に戻す
-    img_data = base64.b64decode(base64_img)
-    nparr = np.frombuffer(img_data, np.uint8)
-    # JPEGバイト列からNumPy配列に変換（BGR形式）
-    img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img_np is None:
-        return None
-    # YOLO推論（画像の形式はBGRでOK）
-    result = model(img_np, verbose=False)
-    # 結果を画像に描画（annotated image）
-    annotated_img = result[0].plot()
-    # annotated image をJPEGにエンコードしてbase64文字列に変換
-    retval, buffer = cv2.imencode('.jpg', annotated_img)
+def create_black():
+    black_img = np.zeros((480, 640, 3), dtype=np.uint8)
+    retval, buffer = cv2.imencode('.jpg', black_img)
     if retval:
-        return base64.b64encode(buffer).decode('utf-8')
+        img_str = base64.b64encode(buffer).decode('utf-8')
+        return img_str
     return None
+
 
 # Flaskのルート定義
 
 @app.route('/')
 def index():
     title = "受信した画像表示"
-    image1 = capture_image("camera1")
-    image2 = capture_image("camera2")
+    # image1 = capture_image("camera1")
+    # image2 = capture_image("camera2")
+    image1 = latest_images["camera1"] if latest_images["camera1"] else create_black()
+    image2 = latest_images["camera2"] if latest_images["camera2"] else create_black()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # +9hする（日本時間）
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
@@ -74,26 +87,71 @@ def index():
 
 @app.route('/capture_image', methods=['GET'])
 def get_all_images():
-    image1 = capture_image("camera1")
-    image2 = capture_image("camera2")
+    # image1 = capture_image("camera1")
+    # image2 = capture_image("camera2")
+    # original, masked, processed, parking_array = process_images(image1)
+    # original2, masked2, processed2, parking_array2 = process_images(image2)
+    image1 = latest_images["camera1"] if latest_images["camera1"] else create_black()
+    image2 = latest_images["camera2"] if latest_images["camera2"] else create_black()
+    # print(f"Parking array for camera1: {parking_array}")
     current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
     return jsonify({
+        # "camera1": {"image": image1, "current_time": current_time},
+        # "camera2": {"image": image2, "current_time": current_time}
         "camera1": {"image": image1, "current_time": current_time},
         "camera2": {"image": image2, "current_time": current_time}
     })
-
-# 推論結果を表示するルート追加
-@app.route('/inference', methods=['GET'])
-def inference_image():
-    results = {}
-    for camera_id in ["camera1", "camera2"]:
-        orig_image = capture_image(camera_id)
-        if not orig_image:
-            results[camera_id] = {"error": "画像がありません"}
-            continue
-        inf_image = inference(orig_image)
-        results[camera_id] = {"image": inf_image}
-    return jsonify(results)
+    
+def process_images(image):
+    """3つの画像（元画像、マスク画像、処理済み画像）を生成"""
+    # global latest_image
+    # print("process_images called")
+    # if latest_image is None:
+    #     print("No latest_image available")
+    #     return None, None, None
+    
+    try:
+        # base64文字列をバイト配列に戻す
+        # img_data = base64.b64decode(latest_image)
+        img_data = base64.b64decode(image)
+        nparr = np.frombuffer(img_data, np.uint8)
+        # JPEGバイト列からNumPy配列に変換（BGR形式）
+        img_np = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img_np is None:
+            print("Failed to decode image")
+            return None, None, None
+        
+        print(f"Image shape: {img_np.shape}")
+        
+        # SpaceDetectorで解析実行
+        original_img, masked_img, processed_img, parking_array = sd.analyze(img_np.copy())
+        
+        print("Analysis completed, encoding images...")
+        
+        # 各画像をbase64エンコード
+        def encode_image(img):
+            if img is None:
+                print("Image is None, cannot encode")
+                return None
+            retval, buffer = cv2.imencode('.jpg', img)
+            if retval:
+                return base64.b64encode(buffer).decode('utf-8')
+            print("Failed to encode image")
+            return None
+        
+        original_b64 = encode_image(original_img)
+        masked_b64 = encode_image(masked_img)
+        processed_b64 = encode_image(processed_img)
+        
+        print(f"Encoding results - Original: {'OK' if original_b64 else 'FAIL'}, Masked: {'OK' if masked_b64 else 'FAIL'}, Processed: {'OK' if processed_b64 else 'FAIL'}")
+        
+        return original_b64, masked_b64, processed_b64, parking_array
+        
+    except Exception as e:
+        print(f"Error in process_images: {e}")
+        import traceback
+        traceback.print_exc()
+        return None, None, None
 
 # gRPCサーバ実装
 class ImageCaptureServicer(capture_pb2_grpc.ImageCaptureServicer):
@@ -121,6 +179,18 @@ class ImageCaptureServicer(capture_pb2_grpc.ImageCaptureServicer):
                 f.write(capture_data.image_data)
             print(f"Saved image to {filename}")
             print(f"Received image id: {camera_id} at {capture_data.timestamp}")
+            try:
+                original, masked, processed, parking_array = process_images(img_b64)
+                if original is not None:
+                    latest_images[camera_id] = original
+                    processed_images[camera_id] = processed
+                    print(f"Processed image for {camera_id} successfully")
+                else:
+                    print(f"Failed to process image for {camera_id}")
+                
+            except Exception as e:
+                print(f"Error processing image: {e}")
+                original, masked, processed, parking_array = None, None, None, None
 
         # ストリーム完了時、最後の画像を応答として返す
         return capture_pb2.CaptureData(
