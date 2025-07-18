@@ -6,11 +6,13 @@ import capture_pb2
 import capture_pb2_grpc
 import os
 
+CAMERA_ID = "camera1"
 
 # please edit if you use AWS
 # host = 'localhost'  # Use 'localhost' for local testing or replace with your server's IP address
-# host = '172.21.48.46'
-host = '54.211.126.57'
+host = '100.69.96.32'
+# host = '54.211.126.57'
+
 
 def capture_data_generator(cap):
     msg_id = 0
@@ -45,6 +47,7 @@ def capture_data_generator(cap):
             # CaptureDataメッセージを作成
             capture_data = capture_pb2.CaptureData(
                 id=msg_id,
+                camera_id=CAMERA_ID,
                 command="request",
                 image_data=image_data,
                 message="Frame captured",
