@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>駐輪状況</title>
+  <title>混雑予測情報</title>
   <style>
     body {
       margin: 0;
@@ -18,7 +18,6 @@
     margin: 0 auto;
     aspect-ratio: 9 / 13;
     background-color: #eee;
-    /* display: flex; ← 削除！ */
   }
 
     .column {
@@ -47,6 +46,16 @@
   background-color: #ddd;
   border: 2px solid #444;
   }
+.column1 {
+  position: absolute; /* ← これが重要！ */
+  width: 14%;
+  height: 30%;
+  background-color: #ddd;
+  border: 2px solid #444;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 
 .column2::before,
 .column2::after {
@@ -57,7 +66,10 @@
   height: 1px;
   background-color: #444;
 }
-
+.column1.vacant { background-color: #d4ffd4; }     /* 緑がかった背景 */
+.column1.few    { background-color: #fff0cc; }     /* オレンジがかった背景 */
+.column1.occupied { background-color: #ffd4d4; }   /* 赤がかった背景 */
+.column1.error { background-color: #e0e0e0; }       /* 灰色 */
 .column2::before {
   top: 33.33%;
 }
@@ -78,14 +90,14 @@
 
     .slot {
   position: absolute;
-  width: 28px;
-  height: 28px;
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
   color: #fff;
   font-weight: bold;
   text-align: center;
-  line-height: 28px;
-  font-size: 14px;
+  line-height: 35px;
+  font-size: 18px;
   cursor: pointer;
   user-select: none;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
@@ -113,6 +125,9 @@
   </style>
 </head>
 <body>
+  <div style="position: absolute; top: 10px; right: 10px;">
+  <a href="../" style="text-decoration: none; background: #444; color: white; padding: 8px 12px; border-radius: 5px; font-size: 14px;">現在の駐輪状況へ</a>
+</div>
 
   <h2 style="text-align: center; color: #333; margin-top: 1rem;">混雑予測情報</h2>
 
@@ -142,23 +157,35 @@
 
 
 <div class="map-container" id="map">
-  <div class="column" style="top: 5%; left: 10%;">
-    <div class="slot" data-id="9" style="top: 25%; left: 50%;"></div>
-    <div class="slot" data-id="8" style="top: 75%; left: 50%;"></div>
+  <div class="column1" style="top: 65%; left: 80%;">
+    <div class="slot" data-id="1" style="top: 50%; left: 50%;"></div>
   </div>
-  <div class="column" style="top: 5%; left: 24%;">
-    <div class="slot" data-id="7" style="top: 25%; left: 50%;"></div>
-    <div class="slot" data-id="6" style="top: 75%; left: 50%;"></div>
+  <div class="column1" style="top: 35%; left: 80%;">
+    <div class="slot" data-id="2" style="top: 50%; left: 50%;"></div>
   </div>
-  <div class="column" style="top: 5%; left: 53%;">
-    <div class="slot" data-id="5" style="top: 25%; left: 50%;"></div>
-    <div class="slot" data-id="4" style="top: 75%; left: 50%;"></div>
+  <div class="column1" style="top: 5%; left: 80%;">
+    <div class="slot" data-id="3" style="top: 50%; left: 50%;"></div>
+    </div>
+  <div class="column1" style="top: 35%; left: 53%;">
+    <div class="slot" data-id="4" style="top: 50%; left: 50%;"></div>
+    </div>
+  <div class="column1" style="top: 5%; left: 53%;">
+    <div class="slot" data-id="5" style="top: 50%; left: 50%;"></div>
   </div>
-  <div class="column2" style="top: 5%; left: 80%;">
-    <div class="slot" data-id="3" style="top: 16.5%; left: 50%;"></div>
-    <div class="slot" data-id="2" style="top: 49.8%; left: 50%;"></div>
-    <div class="slot" data-id="1" style="top: 83.1%; left: 50%;"></div>
+  <div class="column1" style="top: 35%; left: 24%;">
+    <div class="slot" data-id="6" style="top: 50%; left: 50%;"></div>
   </div>
+  <div class="column1" style="top: 5%; left: 24%;">
+    <div class="slot" data-id="7" style="top: 50%; left: 50%;"></div>
+  </div>
+  <div class="column1" style="top: 35%; left: 10%;">
+    <div class="slot" data-id="8" style="top: 50%; left: 50%;"></div>
+  </div>
+  <div class="column1" style="top: 5%; left: 10%;">
+    <div class="slot" data-id="9" style="top: 50%; left: 50%;"></div>
+  </div>
+  </div>
+
 </div>
 
 
@@ -187,17 +214,31 @@
   };
 
   function updateSlotsFromData(data) {
-    document.querySelectorAll('.slot').forEach((slot, idx) => {
-      const status = data?.[idx] ?? -1;
-      slot.classList.remove('vacant', 'few', 'occupied', 'error');
-      if (status === 0) slot.classList.add('vacant');
-      else if (status === 1) slot.classList.add('few');
-      else if (status === 2) slot.classList.add('occupied');
-      else slot.classList.add('error');
+  document.querySelectorAll('.slot').forEach((slot, idx) => {
+    const status = data?.[idx] ?? -1;
+    const parent = slot.parentElement;
 
-      slot.textContent = status >= 0 ? idx + 1 : '?';
-    });
-  }
+    // クラスのリセット
+    slot.classList.remove('vacant', 'few', 'occupied', 'error');
+    parent.classList.remove('vacant', 'few', 'occupied', 'error');
+
+    if (status === 0) {
+      slot.classList.add('vacant');
+      parent.classList.add('vacant');
+    } else if (status === 1) {
+      slot.classList.add('few');
+      parent.classList.add('few');
+    } else if (status === 2) {
+      slot.classList.add('occupied');
+      parent.classList.add('occupied');
+    } else {
+      slot.classList.add('error');
+      parent.classList.add('error');
+    }
+
+    slot.textContent = status >= 0 ? idx + 1 : '?';
+  });
+}
 
   function refreshDisplay() {
     const day = document.getElementById('day-select').value;
