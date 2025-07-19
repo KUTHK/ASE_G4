@@ -39,7 +39,7 @@ processed_images = {
     "camera1": None,
     "camera2": None
 }
-parking_arrays = [-1, -1, -1, -1, -1, -1, -1, -1, -1]
+parking_arrays = [1, -1, -1, -1, -1, -1, -1, -1, -1]
 # parking_arrays = [2, -1, -1, -1, -1, -1, -1, -1, -1]
 
 # model = YOLO("yolov8n.pt")  # YOLOv8のモデルをロード
@@ -109,7 +109,7 @@ def show_images():
     image2 = latest_images["camera2"] if latest_images["camera2"] else create_black()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # +9hする（日本時間）
-    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    # current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
     return render_template('show_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
 
 @app.route('/mask_images')
@@ -119,7 +119,7 @@ def mask_images():
     image2 = masked_images["camera2"] if masked_images["camera2"] else create_black()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # +9hする（日本時間）
-    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    # current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
     return render_template('mask_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
 
 @app.route('/result_images')
@@ -129,7 +129,7 @@ def result_images():
     image2 = processed_images["camera2"] if processed_images["camera2"] else create_black()
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # +9hする（日本時間）
-    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    # current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
     return render_template('result_2camera.html', title=title, image1=image1, image2=image2, current_time=current_time)
 
 @app.route('/api/camera1_image')
@@ -149,7 +149,8 @@ def get_all_images():
     image1 = latest_images["camera1"] if latest_images["camera1"] else create_black()
     image2 = latest_images["camera2"] if latest_images["camera2"] else create_black()
     # print(f"Parking array for camera1: {parking_array}")
-    current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    # current_time = (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M:%S")
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # return jsonify({
     #     # "camera1": {"image": image1, "current_time": current_time},
     #     # "camera2": {"image": image2, "current_time": current_time}
