@@ -29,6 +29,15 @@ def capture_data_generator(cap0, cap1):
             # カメラ0のフレームをJPEG形式にエンコード
             _, buffer0 = cv2.imencode('.jpg', frame0)
             image_data0 = buffer0.tobytes()
+
+            # 現在の日時を取得
+            now = datetime.datetime.now()
+            timestamp_str = now.strftime("%Y%m%d_%H%M%S")
+
+            # 画像をimgディレクトリに保存
+            filename = f"{img_dir}/frame_{timestamp_str}_{msg_id:04d}_{CAMERA_ID_1}.jpg"
+            cv2.imwrite(filename, frame0)
+            print(f"Saved image: {filename}")
             
             # CaptureDataメッセージを作成（カメラ0用）
             capture0 = capture_pb2.CaptureData(
@@ -42,7 +51,16 @@ def capture_data_generator(cap0, cap1):
             # カメラ1のフレームをJPEG形式にエンコード
             _, buffer1 = cv2.imencode('.jpg', frame1)
             image_data1 = buffer1.tobytes()
-            
+
+            # 現在の日時を取得
+            now = datetime.datetime.now()
+            timestamp_str = now.strftime("%Y%m%d_%H%M%S")
+
+            # 画像をimgディレクトリに保存
+            filename = f"{img_dir}/frame_{timestamp_str}_{msg_id:04d}_{CAMERA_ID_2}.jpg"
+            cv2.imwrite(filename, frame1)
+            print(f"Saved image: {filename}")
+
             # CaptureDataメッセージを作成（カメラ1用）
             capture1 = capture_pb2.CaptureData(
                 id=msg_id + 1,
