@@ -47,7 +47,7 @@ parking_arrays = [1, -1, -1, -1, -1, -1, -1, -1, -1]
 img_path_1 = r"../img/camera1/"
 img_path_2 = r"../img/camera2/"
 
-seg_model = YOLO("yolov8n-seg.pt")  # セグメンテーションモデル
+seg_model = YOLO("yolov8l-seg.pt")  # セグメンテーションモデル
 obb_model = YOLO(r"best.pt")  # OBBモデル
 sd = sp.SpaceDetector(seg_model=seg_model, obb_model=obb_model)
 

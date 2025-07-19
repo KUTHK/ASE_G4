@@ -13,6 +13,9 @@ host = '100.69.96.32'
 CAMERA_ID_1 = "camera1"
 CAMERA_ID_2 = "camera2"
 
+img_dir1 = r"../img/raspi1"
+img_dir2 = r"../img/raspi2"
+
 def capture_data_generator(cap0, cap1):
     msg_id = 0
     while True:
@@ -35,7 +38,7 @@ def capture_data_generator(cap0, cap1):
             timestamp_str = now.strftime("%Y%m%d_%H%M%S")
 
             # 画像をimgディレクトリに保存
-            filename = f"{img_dir}/frame_{timestamp_str}_{msg_id:04d}_{CAMERA_ID_1}.jpg"
+            filename = f"{img_dir1}/frame_{timestamp_str}_{msg_id:04d}_{CAMERA_ID_1}.jpg"
             cv2.imwrite(filename, frame0)
             print(f"Saved image: {filename}")
             
@@ -57,7 +60,7 @@ def capture_data_generator(cap0, cap1):
             timestamp_str = now.strftime("%Y%m%d_%H%M%S")
 
             # 画像をimgディレクトリに保存
-            filename = f"{img_dir}/frame_{timestamp_str}_{msg_id:04d}_{CAMERA_ID_2}.jpg"
+            filename = f"{img_dir2}/frame_{timestamp_str}_{msg_id:04d}_{CAMERA_ID_2}.jpg"
             cv2.imwrite(filename, frame1)
             print(f"Saved image: {filename}")
 

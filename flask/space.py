@@ -175,7 +175,7 @@ class SpaceDetector:
 
     def pillar_inference(self, image):
         if torch.cuda.is_available():
-            results = self.obb_model(image, device='cuda')
+            results = self.obb_model(image, device='cuda', conf=0.7)
         else:
             results = self.obb_model(image)
         annoted = results[0].plot()
@@ -303,7 +303,7 @@ class SpaceDetector:
             # 垂直線（90度）との差
             diff = abs(90 - abs(angle_deg))
             angles.append(diff)
-            print(f"線(({x1},{y1})-({x2},{y2})) の傾き: {angle_deg:.2f}度, 垂直との差: {diff:.2f}度")
+            # print(f"線(({x1},{y1})-({x2},{y2})) の傾き: {angle_deg:.2f}度, 垂直との差: {diff:.2f}度")
         return angles
 
     def distances(self, img, centroids, angle, start, end):
@@ -346,7 +346,7 @@ class SpaceDetector:
             # 線を描画
             cross.append((x_cross, y_cross))
             cv2.line(img, (int(cx), int(cy)), (int(x_cross), int(y_cross)), (255, 0, 255), 2)
-            print(f"自転車{i+1}: ({cx},{cy}) → 屋根交点: ({int(x_cross)},{int(y_cross)})")
+            # print(f"自転車{i+1}: ({cx},{cy}) → 屋根交点: ({int(x_cross)},{int(y_cross)})")
 
         # self.show_image(img)
         return img, cross
@@ -377,7 +377,7 @@ class SpaceDetector:
             # roof線上でのy座標を計算
             roof_y = m * pillar_x + b
             pillar_roof_points.append((pillar_x, roof_y))
-            print(f"Pillar {i+1} とroof線の交点: ({pillar_x:.1f}, {roof_y:.1f})")
+            # print(f"Pillar {i+1} とroof線の交点: ({pillar_x:.1f}, {roof_y:.1f})")
         
         # x座標順にソート
         pillar_roof_points.sort(key=lambda p: p[0])
@@ -397,7 +397,7 @@ class SpaceDetector:
         
         # print(f"\nPillar roof線交点のx座標: {[f'{x:.1f}' for x in pillar_x_coords]}")
         # print(f"相邻pillar间像素距離: {[f'{d:.1f}' for d in pixel_distances]}")
-        print(f"各区間のpixel_per_meter: {[f'{ppm:.2f}' for ppm in pixel_per_meter_array]}")
+        # print(f"各区間のpixel_per_meter: {[f'{ppm:.2f}' for ppm in pixel_per_meter_array]}")
 
         PIXEL_PER_METER_ARRAY = pixel_per_meter_array
         # PIXEL_PER_METER_ARRAY = [ppm * 0.01 for ppm in pixel_per_meter_array] 
@@ -501,9 +501,12 @@ class SpaceDetector:
         
         print(f"総実世界距離: {total_real_distance:.2f}m")
         return total_real_distance
-    
-    def parking_judge(self, cross, p):
-        REQUIRED_SPACE = 1.0
+
+    def parking_judge(self, cross, pillar_x_coords, pixel_per_meter):
+
+        # pixel_per_meter = [i*0.7 for i in pixel_per_meter]  # 0.7倍で補正
+
+        REQUIRED_SPACE = 1.5
         
         total_capacity = 0
         usable_spaces = []
@@ -512,19 +515,35 @@ class SpaceDetector:
         for i in range(len(cross)-1):
             x1, y1 = cross[i]
             x2, y2 = cross[i+1]
-            dist = p(x2) - p(x1)
-            
+            # dist = abs(p(x2)) - abs(p(x1))
+            # dist_p = abs(x2 - x1)
+            # print(f"dist_p: {dist_p}")
+            # dist = abs(p(dist_p))
+            # print("dist:", dist)
+            print(x1, x2)
+            dist = 0.0
+            for pixel in range(int(x1), int(x2) + 1):
+                # 区間判定
+                if pixel <= pillar_x_coords[0]:
+                    ppm = pixel_per_meter[0]
+                elif pixel >= pillar_x_coords[-1]:
+                    ppm = pixel_per_meter[-1]
+                else:
+                    for j in range(len(pillar_x_coords)-1):
+                        if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
+                            ppm = pixel_per_meter[j]
+                            break
+                dist += ppm  # 1ピクセルごとに距離[m]を加算
+
             if dist is not None and dist > 0:
                 print(f"区間 {i+1}: 距離 {dist:.2f}m")
-                
-                if dist >= 1.0:  # 1m以上を有効スペースとする
+
+                if dist >= 1.5:  # 1.5m以上を有効スペースとする
                     usable_spaces.append(dist)
                     max_continuous_space = max(max_continuous_space, dist)
-                    
-                    # この区間の駐輪可能台数
+
                     bikes_in_section = int(dist / REQUIRED_SPACE)
                     total_capacity += bikes_in_section
-                    # print(f"  → 駐輪可能台数: {bikes_in_section}台")
         
         print(f"総駐輪可能台数: {total_capacity}台")
         print(f"有効スペース数: {len(usable_spaces)}箇所")
@@ -573,17 +592,43 @@ class SpaceDetector:
 
                 img, start, end = self.make_line(img, vertical_lines)
                 ppm, pillar_x_coords = self.calculate_pillar_roof_intersections(vertical_lines, start, end)
-                
-                real_pillar = [i*self.pillar_distance for i in range(len(pillar_x_coords))]
-                p = Polynomial.fit(pillar_x_coords, real_pillar, deg=2)
-                
+                real_pillar = [(i+1)*self.pillar_distance for i in range(len(pillar_x_coords))]
+                print("pillar_x_coords:", pillar_x_coords)
+                print("real_pillar:", real_pillar)
+                p = Polynomial.fit(pillar_x_coords, real_pillar, deg=1)
+                print("近似式", p)
+                pixel_per_meter = []
+                for i in range(len(pillar_x_coords)-1):
+                    x1 = pillar_x_coords[i]
+                    x2 = pillar_x_coords[i+1]
+                    pixel_per_meter.append(self.pillar_distance / (x2 - x1))
+
+                section = pixel_per_meter[0]
+                dev = 0.0
+                for ppm in range(len(pixel_per_meter)-1):
+                    ppm1 = pixel_per_meter[ppm]
+                    ppm2 = pixel_per_meter[ppm+1]
+                    dev += abs(ppm1 - ppm2)
+                dev /= (len(pixel_per_meter) - 1)
+
+                print("section:", section)
+                print("dev:", dev)
+                # increase_percent = []
+                # for i in range(len(pixel_per_meter)-1):
+                #     before = pixel_per_meter[i]
+                #     after = pixel_per_meter[i+1]
+                #     percent = ((after - before) / before) * 100
+                #     increase_percent.append(percent)
+                # print("増加率（%）:", increase_percent)
+
+                print("pixel_per_meter:", pixel_per_meter)
                 angles = self.calc_angle(vertical_lines)
                 angle = np.max(angles[0:2]) if len(angles) >= 2 else 0
                 # print(f"最大の角度差: {angle:.2f}度")
                 processed_img, cross = self.distances(img, centroids, angle*(-1), start, end)
                 cross = sorted(cross, key=lambda p: p[0])  # x座標でソート
-
-                parking_status = self.parking_judge(cross, p)
+                print("自転車の重心からの交点座標:", cross)
+                parking_status = self.parking_judge(cross, pillar_x_coords, pixel_per_meter)
                 parking_array[ind] = parking_status
             else:
                 processed_img = img.copy()
