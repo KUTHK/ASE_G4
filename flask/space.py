@@ -531,7 +531,17 @@ class SpaceDetector:
                 else:
                     for j in range(len(pillar_x_coords)-1):
                         if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
-                            ppm = pixel_per_meter[j]
+                            # ユークリッド距離を計算
+                            euclid = abs(pillar_x_coords[j+1] - pillar_x_coords[j])
+                            ppm = euclid / self.pillar_distance
+                            # 中点座標を求める
+                            mid = (pillar_x_coords[j] + pillar_x_coords[j+1]) / 2
+                            # 線形補間
+                            if pixel < mid:
+                                ppm = pixel_per_meter[j] * (mid - pixel) / (mid - pillar_x_coords[j])
+                            else:
+                                ppm = pixel_per_meter[j+1] * (pixel - mid) / (pillar_x_coords[j+1] - mid)
+                            # ppm = pixel_per_meter[j]
                             break
                 dist += ppm  # 1ピクセルごとに距離[m]を加算
 
