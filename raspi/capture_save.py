@@ -6,7 +6,7 @@ import capture_pb2
 import capture_pb2_grpc
 import os
 
-CAMERA_ID = "camera1"
+CAMERA_ID = "camera4"
 
 # please edit if you use AWS
 host = 'localhost'  # Use 'localhost' for local testing or replace with your server's IP address

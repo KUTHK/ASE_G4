@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding-top: 50px; background-color: #f8f9fa; }
+        .container { text-align: center; }
+        .camera-block { margin-bottom: 40px; }
+        .timestamp { margin-top: 10px; font-size: 1.2em; }
+        button { margin: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4">{{ title }}</h2>
+        <div class="timestamp mb-3">
+            撮影時刻: <span id="current-time">{{ current_time }}</span>
+        </div>
+        <div class="camera-block">
+            <h3>カメラ1</h3>
+            <img src="data:image/jpeg;base64,{{ image }}" alt="Mask Image" style="max-width:640px;max-height:480px;" class="img-fluid rounded border">
+        </div>
+    </div>
+    <div style="position: absolute; top: 10px; right: 10px;">
+      <a href="/" style="text-decoration: none; background: #444; color: white; padding: 8px 12px; border-radius: 5px; font-size: 14px;">駐輪状況🔴</a>
+    </div>
+    <div style="position: absolute; top: 50px; right: 10px;">
+      <a href="/show_image" style="text-decoration: none; background: #444; color: white; padding: 8px 12px; border-radius: 5px; font-size: 14px;">取得画像表示</a>
+    </div>
+    <div style="position: absolute; top: 90px; right: 10px;">
+      <a href="/result_image" style="text-decoration: none; background: #444; color: white; padding: 8px 12px; border-radius: 5px; font-size: 14px;">結果画像表示</a>
+    </div>
+</body>
+</html>

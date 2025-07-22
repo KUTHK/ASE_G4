@@ -640,9 +640,11 @@ class SpaceDetector:
                 print("自転車の重心からの交点座標:", cross)
                 parking_status = self.parking_judge(cross, pillar_x_coords, pixel_per_meter)
                 parking_array[ind] = parking_status
+                # parking_array[ind] = 2
             else:
                 processed_img = img.copy()
                 parking_array = [-1, -1, -1, -1, -1, -1, -1, -1, -1]
+                # parking_array[ind] = 2
             
             print("Analysis completed successfully")
             return original_img, masked_img, processed_img, parking_array
