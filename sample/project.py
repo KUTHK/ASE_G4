@@ -522,24 +522,35 @@ def parking_judge(cross, pillar_x_coords, pixel_per_meter, img):
             elif pixel >= pillar_x_coords[-1]:
                 ppm = pixel_per_meter[-1]
             else:
+                # for j in range(len(pillar_x_coords)-1):
+                #     if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
+                #         # ユークリッド距離を計算
+                #         euclid = abs(pillar_x_coords[j+1] - pillar_x_coords[j])
+                #         ppm = euclid / 2.8
+                #         # 中点座標を求める
+                #         mid = (pillar_x_coords[j] + pillar_x_coords[j+1]) / 2
+                #         # 線形補間
+                #         if pixel < mid:
+                #             ppm = pixel_per_meter[j-1] * (mid - pixel) / (mid - pillar_x_coords[j])
+                #         else:
+                #             ppm = pixel_per_meter[j] * (pixel - mid) / (pillar_x_coords[j+1] - mid)
+                #         # ppm = pixel_per_meter[j]
+                #         break
                 for j in range(len(pillar_x_coords)-1):
                     if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
-                        # ユークリッド距離を計算
-                        euclid = abs(pillar_x_coords[j+1] - pillar_x_coords[j])
-                        ppm = euclid / 2.8
-                        # 中点座標を求める
-                        mid = (pillar_x_coords[j] + pillar_x_coords[j+1]) / 2
-                        # 線形補間
-                        if pixel < mid:
-                            ppm = pixel_per_meter[j-1] * (mid - pixel) / (mid - pillar_x_coords[j])
+                        # 線形補間（区間の両端値を使う）
+                        if j+1 < len(pixel_per_meter):
+                            ratio = (pixel - pillar_x_coords[j]) / (pillar_x_coords[j+1] - pillar_x_coords[j])
+                            ppm = pixel_per_meter[j] * (1 - ratio) + pixel_per_meter[j+1] * ratio
                         else:
-                            ppm = pixel_per_meter[j] * (pixel - mid) / (pillar_x_coords[j+1] - mid)
-                        # ppm = pixel_per_meter[j]
+                            ppm = pixel_per_meter[j]  # 最後の区間はj番目のみ
                         break
             dist += ppm  # 1ピクセルごとに距離[m]を加算
 
         if dist is not None and dist > 0:
             print(f"区間 {i}: 距離 {dist:.2f}m")
+            height = i % 2 * 50
+            cv2.putText(img, f"{dist:.2f}m", (int((x1 + x2) / 2), int((y1 + y2) / 2)+height), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
             if dist >= 1.5:  # 1.5m以上を有効スペースとする
                 usable_spaces.append(dist)
@@ -551,6 +562,7 @@ def parking_judge(cross, pillar_x_coords, pixel_per_meter, img):
     print(f"総駐輪可能台数: {total_capacity}台")
     print(f"有効スペース数: {len(usable_spaces)}箇所")
     print(f"最大連続スペース: {max_continuous_space:.2f}m")
+    show_image(img)
     
     # より細かい判定基準
     if total_capacity >= 4 or max_continuous_space >= 4.0:
@@ -571,6 +583,7 @@ def main():
     # 画像の読み込み
     img = cv2.imread('sample.jpg')
     img = cv2.imread('sample2.jpg')
+    # img = cv2.imread(r"C:\Users\ryoma\Downloads\20250719_062436_0\20250719_062426_0.jpg")
     # img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
     vertical_lines = pillar_inference(img)
     # vertical_lines = pillar_inference_pca(img)

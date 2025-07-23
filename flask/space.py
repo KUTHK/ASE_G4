@@ -608,19 +608,28 @@ class SpaceDetector:
                 elif pixel >= pillar_x_coords[-1]:
                     ppm = pixel_per_meter[-1]
                 else:
+                    # for j in range(len(pillar_x_coords)-1):
+                    #     if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
+                    #         # ユークリッド距離を計算
+                    #         euclid = abs(pillar_x_coords[j+1] - pillar_x_coords[j])
+                    #         ppm = euclid / 2.8
+                    #         # 中点座標を求める
+                    #         mid = (pillar_x_coords[j] + pillar_x_coords[j+1]) / 2
+                    #         # 線形補間
+                    #         if pixel < mid:
+                    #             ppm = pixel_per_meter[j-1] * (mid - pixel) / (mid - pillar_x_coords[j])
+                    #         else:
+                    #             ppm = pixel_per_meter[j] * (pixel - mid) / (pillar_x_coords[j+1] - mid)
+                    #         # ppm = pixel_per_meter[j]
+                    #         break
                     for j in range(len(pillar_x_coords)-1):
                         if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
-                            # ユークリッド距離を計算
-                            euclid = abs(pillar_x_coords[j+1] - pillar_x_coords[j])
-                            ppm = euclid / 2.8
-                            # 中点座標を求める
-                            mid = (pillar_x_coords[j] + pillar_x_coords[j+1]) / 2
-                            # 線形補間
-                            if pixel < mid:
-                                ppm = pixel_per_meter[j-1] * (mid - pixel) / (mid - pillar_x_coords[j])
+                            # 線形補間（区間の両端値を使う）
+                            if j+1 < len(pixel_per_meter):
+                                ratio = (pixel - pillar_x_coords[j]) / (pillar_x_coords[j+1] - pillar_x_coords[j])
+                                ppm = pixel_per_meter[j] * (1 - ratio) + pixel_per_meter[j+1] * ratio
                             else:
-                                ppm = pixel_per_meter[j] * (pixel - mid) / (pillar_x_coords[j+1] - mid)
-                            # ppm = pixel_per_meter[j]
+                                ppm = pixel_per_meter[j]  # 最後の区間はj番目のみ
                             break
                 dist += ppm  # 1ピクセルごとに距離[m]を加算
 
