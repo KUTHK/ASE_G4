@@ -109,27 +109,27 @@ def resize(image, target_size):
     return padded
 
 def mask(image, result):
-    
+    # space.pyと同じくtuple返却
     if not hasattr(result, 'masks') or result.masks is None:
         print("No masks found in the result.")
-        return image
+        return image.copy(), 0, 0
 
-    # extract the segmented area from the YOLO result
     mask_tensor = result.masks.data
-    mask_np = mask_tensor.cpu().numpy() if hasattr(mask_tensor, "cpu") else mask_tensor 
-    
+    mask_np = mask_tensor.cpu().numpy() if hasattr(mask_tensor, "cpu") else mask_tensor
+
     combined_mask = np.zeros(mask_np[0].shape, dtype=bool)
-    
     for m in mask_np:
         combined_mask |= (m > 0.5)
 
     masked_img = image.copy()
     masked_img[combined_mask, :] = 0
-    
-    # extract max and min y cordinate from the mask
-    max_y = np.max(np.where(combined_mask)[0])
-    min_y = np.min(np.where(combined_mask)[0])
-    # print(f"Mask Y coordinates: min={min_y}, max={max_y}")
+
+    if np.any(combined_mask):
+        max_y = np.max(np.where(combined_mask)[0])
+        min_y = np.min(np.where(combined_mask)[0])
+    else:
+        max_y = 0
+        min_y = 0
     return masked_img, max_y, min_y
 
     
@@ -370,7 +370,7 @@ def calculate_pillar_roof_intersections(vertical_lines, start, end):
         pixel_dist = abs(pillar_x_coords[i+1] - pillar_x_coords[i])
         pixel_distances.append(pixel_dist)
     
-    # 各区间的pixel_per_meter比例を計算
+    # 各区間のpixel_per_meter比例を計算
     pixel_per_meter_array = []
     for pixel_dist in pixel_distances:
         ppm = pixel_dist / PILLAR_DISTANCE
@@ -483,6 +483,85 @@ def world_distance(x1, x2):
     print(f"総実世界距離: {total_real_distance:.2f}m")
     return total_real_distance
 
+def parking_judge(cross, pillar_x_coords, pixel_per_meter, img):
+
+    # pixel_per_meter = [i*0.7 for i in pixel_per_meter]  # 0.7倍で補正
+
+    print(len(cross), "個の交点が検出されました")
+    REQUIRED_SPACE = 1.5
+    y_left = cross[0][1]
+    y_right = cross[-1][1]
+
+    img_shape = img.shape
+    print("画像の形状:", img_shape)
+   
+    left_point = (0, y_left)
+    right_point = (img_shape[1]-1, y_right)
+    cross = [left_point] + cross + [right_point]
+    print(len(cross), "個の交点を補正しました")
+
+    total_capacity = 0
+    usable_spaces = []
+    max_continuous_space = 0
+    
+    print(len(pillar_x_coords), "個の柱のx座標が検出されました")
+    for i in range(len(cross)-1):
+        x1, y1 = cross[i]
+        x2, y2 = cross[i+1]
+        # dist = abs(p(x2)) - abs(p(x1))
+        # dist_p = abs(x2 - x1)
+        # print(f"dist_p: {dist_p}")
+        # dist = abs(p(dist_p))
+        # print("dist:", dist)
+        # print(x1, x2)
+        dist = 0.0
+        for pixel in range(int(x1), int(x2) + 1):
+            # 区間判定
+            if pixel <= pillar_x_coords[0]:
+                ppm = pixel_per_meter[0]
+            elif pixel >= pillar_x_coords[-1]:
+                ppm = pixel_per_meter[-1]
+            else:
+                for j in range(len(pillar_x_coords)-1):
+                    if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
+                        # ユークリッド距離を計算
+                        euclid = abs(pillar_x_coords[j+1] - pillar_x_coords[j])
+                        ppm = euclid / 2.8
+                        # 中点座標を求める
+                        mid = (pillar_x_coords[j] + pillar_x_coords[j+1]) / 2
+                        # 線形補間
+                        if pixel < mid:
+                            ppm = pixel_per_meter[j-1] * (mid - pixel) / (mid - pillar_x_coords[j])
+                        else:
+                            ppm = pixel_per_meter[j] * (pixel - mid) / (pillar_x_coords[j+1] - mid)
+                        # ppm = pixel_per_meter[j]
+                        break
+            dist += ppm  # 1ピクセルごとに距離[m]を加算
+
+        if dist is not None and dist > 0:
+            print(f"区間 {i}: 距離 {dist:.2f}m")
+
+            if dist >= 1.5:  # 1.5m以上を有効スペースとする
+                usable_spaces.append(dist)
+                max_continuous_space = max(max_continuous_space, dist)
+
+                bikes_in_section = int(dist / REQUIRED_SPACE)
+                total_capacity += bikes_in_section
+        
+    print(f"総駐輪可能台数: {total_capacity}台")
+    print(f"有効スペース数: {len(usable_spaces)}箇所")
+    print(f"最大連続スペース: {max_continuous_space:.2f}m")
+    
+    # より細かい判定基準
+    if total_capacity >= 4 or max_continuous_space >= 4.0:
+        return 2  # 緑：余裕
+    elif total_capacity >= 2 or (total_capacity >= 1 and len(usable_spaces) >= 2):
+        return 1  # 黄：すきま空いてるけど、おけ
+    elif total_capacity >= 1:
+        return 1  # 黄：1台しかむり
+    else:
+        return 0  # 赤：駐輪できない
+
 def show_image(image):
     cv2.imshow('Image', image)
     cv2.waitKey(0)
@@ -491,7 +570,7 @@ def show_image(image):
 def main():
     # 画像の読み込み
     img = cv2.imread('sample.jpg')
-    # img = cv2.imread('sample2.jpg')
+    img = cv2.imread('sample2.jpg')
     # img = cv2.imread(r"C:\Users\ryoma\修士科目\ASE\images\img0\2025-07-05T06-35-14.214929_336.jpg")
     vertical_lines = pillar_inference(img)
     # vertical_lines = pillar_inference_pca(img)
@@ -520,13 +599,27 @@ def main():
 
     # project_front(img, vertical_lines, horizontal_lines)
     img, start, end = make_line(img, vertical_lines)
-    result1, result2 = calculate_pillar_roof_intersections(vertical_lines, start, end)
+    result1, pillar_x_coords = calculate_pillar_roof_intersections(vertical_lines, start, end)
     print(f"pixel_per_meter_array: {result1}")
-    print(f"pillar_x_coords: {result2}")
+    print(f"pillar_x_coords: {pillar_x_coords}")
 
-    real_pillar = [i* PILLAR_DISTANCE for i in range(len(result2))]
-    p = Polynomial.fit(result2, real_pillar, deg=2)
+    real_pillar = [i* PILLAR_DISTANCE for i in range(len(pillar_x_coords))]
+    p = Polynomial.fit(pillar_x_coords, real_pillar, deg=2)
     print(f"Polynomial coefficients: {p.coef}")
+
+    pixel_per_meter = []
+    for i in range(len(pillar_x_coords)-1):
+        x1 = pillar_x_coords[i]
+        x2 = pillar_x_coords[i+1]
+        pixel_per_meter.append(2.8 / (x2 - x1))
+
+    section = pixel_per_meter[0]
+    dev = 0.0
+    for ppm in range(len(pixel_per_meter)-1):
+        ppm1 = pixel_per_meter[ppm]
+        ppm2 = pixel_per_meter[ppm+1]
+        dev += abs(ppm1 - ppm2)
+    dev /= (len(pixel_per_meter) - 1)
 
     angles = calc_angle(vertical_lines)
     # print("各縦線の垂直からの角度差:", angles)
@@ -545,6 +638,15 @@ def main():
             print(f"distance between bicycle {i+1} and bicycle {i+2}: {dist:.2f} m")
         else:
             print(f"distance between bicycle {i+1} and bicycle {i+2}: failed")
+
+    # 駐輪判定
+    parking_space = parking_judge(cross, pillar_x_coords, pixel_per_meter, img)
+    if parking_space == 2:
+        print("駐輪スペースに余裕あり")
+    elif parking_space == 1:
+        print("すきま空いてるけど駐輪可能")
+    else:
+        print("駐輪スペースなし")
 
 
 if __name__ == "__main__":

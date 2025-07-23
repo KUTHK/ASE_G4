@@ -569,6 +569,85 @@ class SpaceDetector:
         else:
             return 0  # 赤：駐輪できない
         
+    def parking_judge2(cross, pillar_x_coords, pixel_per_meter, img):
+
+        # pixel_per_meter = [i*0.7 for i in pixel_per_meter]  # 0.7倍で補正
+
+        print(len(cross), "個の交点が検出されました")
+        REQUIRED_SPACE = 1.5
+        y_left = cross[0][1]
+        y_right = cross[-1][1]
+
+        img_shape = img.shape
+        print("画像の形状:", img_shape)
+    
+        left_point = (0, y_left)
+        right_point = (img_shape[1]-1, y_right)
+        cross = [left_point] + cross + [right_point]
+        print(len(cross), "個の交点を補正しました")
+
+        total_capacity = 0
+        usable_spaces = []
+        max_continuous_space = 0
+        
+        print(len(pillar_x_coords), "個の柱のx座標が検出されました")
+        for i in range(len(cross)-1):
+            x1, y1 = cross[i]
+            x2, y2 = cross[i+1]
+            # dist = abs(p(x2)) - abs(p(x1))
+            # dist_p = abs(x2 - x1)
+            # print(f"dist_p: {dist_p}")
+            # dist = abs(p(dist_p))
+            # print("dist:", dist)
+            # print(x1, x2)
+            dist = 0.0
+            for pixel in range(int(x1), int(x2) + 1):
+                # 区間判定
+                if pixel <= pillar_x_coords[0]:
+                    ppm = pixel_per_meter[0]
+                elif pixel >= pillar_x_coords[-1]:
+                    ppm = pixel_per_meter[-1]
+                else:
+                    for j in range(len(pillar_x_coords)-1):
+                        if pillar_x_coords[j] <= pixel < pillar_x_coords[j+1]:
+                            # ユークリッド距離を計算
+                            euclid = abs(pillar_x_coords[j+1] - pillar_x_coords[j])
+                            ppm = euclid / 2.8
+                            # 中点座標を求める
+                            mid = (pillar_x_coords[j] + pillar_x_coords[j+1]) / 2
+                            # 線形補間
+                            if pixel < mid:
+                                ppm = pixel_per_meter[j-1] * (mid - pixel) / (mid - pillar_x_coords[j])
+                            else:
+                                ppm = pixel_per_meter[j] * (pixel - mid) / (pillar_x_coords[j+1] - mid)
+                            # ppm = pixel_per_meter[j]
+                            break
+                dist += ppm  # 1ピクセルごとに距離[m]を加算
+
+            if dist is not None and dist > 0:
+                print(f"区間 {i}: 距離 {dist:.2f}m")
+
+                if dist >= 1.5:  # 1.5m以上を有効スペースとする
+                    usable_spaces.append(dist)
+                    max_continuous_space = max(max_continuous_space, dist)
+
+                    bikes_in_section = int(dist / REQUIRED_SPACE)
+                    total_capacity += bikes_in_section
+            
+        print(f"総駐輪可能台数: {total_capacity}台")
+        print(f"有効スペース数: {len(usable_spaces)}箇所")
+        print(f"最大連続スペース: {max_continuous_space:.2f}m")
+        
+        # より細かい判定基準
+        if total_capacity >= 4 or max_continuous_space >= 4.0:
+            return 2  # 緑：余裕
+        elif total_capacity >= 2 or (total_capacity >= 1 and len(usable_spaces) >= 2):
+            return 1  # 黄：すきま空いてるけど、おけ
+        elif total_capacity >= 1:
+            return 1  # 黄：1台しかむり
+        else:
+            return 0  # 赤：駐輪できない
+        
 
     def show_image(self, image):
         cv2.imshow('Image', image)
@@ -638,7 +717,7 @@ class SpaceDetector:
                 processed_img, cross = self.distances(img, centroids, angle*(-1), start, end)
                 cross = sorted(cross, key=lambda p: p[0])  # x座標でソート
                 print("自転車の重心からの交点座標:", cross)
-                parking_status = self.parking_judge(cross, pillar_x_coords, pixel_per_meter)
+                parking_status = self.parking_judge2(cross, pillar_x_coords, pixel_per_meter, img)
                 parking_array[ind] = parking_status
                 # parking_array[ind] = 2
             else:
